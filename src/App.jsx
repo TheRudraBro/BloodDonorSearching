@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import Header from './components/Header'
+import DonorRegistry from './components/DonorRegistry'
 
 
 function App() {
@@ -7,15 +9,11 @@ function App() {
   return (
     <>
     <div className= 'bg-slate-800'>
-    <h2 className = 'bg-red-600'> Hello Fucker </h2>
-    <div className="card bg-slate-900 shadow-sm">
-      <div className="card-body text-white">
+    <div className='container mx-auto py-4 space-y-4'>
 
-<h2>Blood Finder</h2>
-<p>Donor registry, search, request management and AI matching score.</p>
-
-      </div>
-</div>
+      <Header/>
+      <DonorRegistry/>
+</div>   
 </div>
 
     </>
