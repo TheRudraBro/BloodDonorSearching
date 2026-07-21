@@ -3,6 +3,17 @@ import Header from './components/Header'
 import DonorRegistry from './components/DonorRegistry'
 
 
+const divisions = [
+  "Dhaka",
+  "Chittagong",
+  "Khulna",
+  "Rajshahi",
+  "Sylhet",
+  "Barisal",
+  "Mymensingh"
+];
+
+
 function App() {
   const [count, setCount] = useState(0)
 
@@ -12,7 +23,7 @@ function App() {
     <div className='container mx-auto py-4 space-y-4'>
 
       <Header/>
-      <DonorRegistry/>
+      <DonorRegistry divisions={divisions}/>
 </div>   
 </div>
 

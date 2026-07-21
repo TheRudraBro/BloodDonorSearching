@@ -1,7 +1,7 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 
-const DonorRegistry = () => {
+const DonorRegistry = ({divisions}) => {
 
 const {
     register,
@@ -44,13 +44,11 @@ className="select select-bordered w-full">
 <select defaultValue="Select Your Location" 
 className="select select-bordered w-full">
   <option disabled={true}>Select your Location</option>
-  <option>Dhaka</option>
-  <option>Chittagong</option>
-  <option>Khulna</option>
-  <option>Rajshahi</option>
-  <option>Sylhet</option>
-  <option>Barisal</option>
-  <option>Mymensingh</option>
+    {
+      divisions.map((division, index) => {
+        return <option key={index} value={division}>{division}</option>
+      } )
+    }
 </select>
 
 <input 
