@@ -6,7 +6,7 @@ const Header = () => {
       <div className="card-body text-white">
 
 <h2 className='font-bold text-3xl'>
-  Blood Finder Origanized By Kingdom
+  Blood Finder Origanized By <span className="text-blue-500">Capital Of Kingdom</span>
   </h2>
 <p>
   Donor registry, search, request management and AI matching score.
