@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Header from './components/Header'
 import DonorRegistry from './components/DonorRegistry'
+import DonorList from './components/DonorList'
 
 
 const divisions = [
@@ -36,6 +37,7 @@ function App() {
 
       <Header/>
       <DonorRegistry divisions={divisions} bloodGroups={bloodGroups} />
+      <DonorList/>
 </div>   
 </div>
 
