@@ -26,20 +26,22 @@ const bloodCompatibility = {
   "O-": ["O-"]
 };
 
-// ১০০ এবং ৭০ পয়েন্টের নতুন Scoring Logic
 const computeScore = (donor, requestedBloodData) => {
+  // ১. ব্লাড গ্রুপ পুরোপুরি আলাদা হলে সরাসরি 0 পয়েন্ট
   const allowedDonors = bloodCompatibility[requestedBloodData.bloodGroup] ?? [];
-  
   if (!allowedDonors.includes(donor.bloodGroup)) {
-    return 0; // ব্লাড গ্রুপ না মিললে 0 পয়েন্ট
+    return 0;
   }
 
-  // ব্লাড গ্রুপ + ডিভিশন দুইটাই মিললে 100 পয়েন্ট
-  if (donor.division === requestedBloodData.division) {
+  // ২. ব্লাড গ্রুপ হুবহু এক এবং ডিভিশনও এক = ১০০ পয়েন্ট
+  if (
+    donor.bloodGroup === requestedBloodData.bloodGroup &&
+    donor.division === requestedBloodData.division
+  ) {
     return 100;
   }
 
-  // ব্লাড গ্রুপ মিলছে কিন্তু ডিভিশন আলাদা হলে 70 পয়েন্ট
+  // ৩. বাকি সামঞ্জস্যপূর্ণ ব্লাড গ্রুপ (যেমন: A+ এর ক্ষেত্রে A-, O+, O-) বা আলাদা ডিভিশনের ক্ষেত্রে = ৭০ পয়েন্ট
   return 70;
 };
 
