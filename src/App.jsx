@@ -1,18 +1,20 @@
-import { useState } from 'react'
+// App.jsx
+import { useState, useEffect } from 'react'
 import Header from './components/Header'
 import DonorRegistry from './components/DonorRegistry'
 import DonorList from './components/DonorList'
 
-
 const divisions = [
   "Dhaka",
-  "Chittagong",
+  "Chattogram",
   "Khulna",
   "Rajshahi",
   "Sylhet",
-  "Barisal",
+  "Barishal",
+  "Rangpur",
   "Mymensingh"
 ];
+
 const bloodCompatibility = {
   "A+": ["A+", "A-", "O+", "O-"],
   "A-": ["A-", "O-"],
@@ -24,25 +26,40 @@ const bloodCompatibility = {
   "O-": ["O-"]
 };
 
-
 const bloodGroups = Object.keys(bloodCompatibility);
-console.log(bloodGroups, "Blood Groups:");
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [donors, setDonors] = useState([]);
+
+  // data.json থেকে ইনিশিয়াল ৫০ জনের ডেটা App-এ লোড করুন
+  useEffect(() => {
+    async function loadDonors() {
+      try {
+        const res = await fetch("/data.json");
+        const data = await res.json();
+        setDonors(data);
+      } catch (error) {
+        console.error("Error loading donors:", error);
+      }
+    }
+    loadDonors();
+  }, []);
 
   return (
-    <>
-    <div className= 'bg-slate-800'>
-    <div className='container mx-auto py-4 space-y-4'>
-
-      <Header/>
-      <DonorRegistry divisions={divisions} bloodGroups={bloodGroups} />
-      <DonorList/>
-</div>   
-</div>
-
-    </>
-  )
+    <div className='bg-slate-800 min-h-screen'>
+      <div className='container mx-auto py-4 space-y-4'>
+        <Header />
+        <DonorRegistry 
+          divisions={divisions} 
+          bloodGroups={bloodGroups} 
+          donors={donors} 
+          setDonors={setDonors} 
+        />
+        {/* DonorList-এ donors পাস করে দিন */}
+        <DonorList donors={donors} />
+      </div>   
+    </div>
+  );
 }
 
-export default App
+export default App;

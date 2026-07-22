@@ -1,27 +1,17 @@
-import React, { useEffect, useState } from "react";
+// DonorList.jsx
+import React, { useState } from "react";
 
-const DonorList = () => {
-  const [donors, setDonors] = useState([]);
-  const [search, setSearch] = useState("");
+const DonorList = ({ donors }) => { // Props থেকে donors গ্রহণ করা হলো
   const [bloodGroup, setBloodGroup] = useState("");
   const [division, setDivision] = useState("");
   const [availability, setAvailability] = useState("");
-
-  useEffect(() => {
-    async function loadDonors() {
-      const res = await fetch("/data.json");
-      const data = await res.json();
-      setDonors(data);
-    }
-
-    loadDonors();
-  }, []);
+  const [search, setSearch] = useState("");
 
   const filteredDonors = donors.filter((donor) => {
     const matchSearch =
-      donor.name.toLowerCase().includes(search.toLowerCase()) ||
-      donor.id.toLowerCase().includes(search.toLowerCase()) ||
-      donor.phone.includes(search);
+      (donor.name && donor.name.toLowerCase().includes(search.toLowerCase())) ||
+      (donor.id && donor.id.toLowerCase().includes(search.toLowerCase())) ||
+      (donor.phone && donor.phone.includes(search));
 
     const matchBlood =
       bloodGroup === "" || donor.bloodGroup === bloodGroup;
@@ -45,14 +35,12 @@ const DonorList = () => {
   return (
     <div className="card bg-slate-900 shadow-xl border border-slate-700">
       <div className="card-body">
-
         <h2 className="text-3xl font-bold text-white mb-6">
           Blood Donor List
         </h2>
 
-        {/* Search & Filter */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-
+        {/* Search & Filter Section */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-center">
           <input
             type="text"
             placeholder="Search Name / ID / Phone"
@@ -92,7 +80,6 @@ const DonorList = () => {
             <option>Sylhet</option>
             <option>Mymensingh</option>
           </select>
-          
 
           <select
             className="select select-bordered bg-slate-800 border-slate-700 text-white"
@@ -102,16 +89,16 @@ const DonorList = () => {
             <option value="">All Status</option>
             <option value="true">Available</option>
             <option value="false">Unavailable</option>
-            
           </select>
-           <h2 className="text-white font-bold text-lg"> {filteredDonors.length} Donors Found</h2>
+
+          <h2 className="text-white font-bold text-lg col-span-1 md:col-span-4">
+            {filteredDonors.length} Donors Found
+          </h2>
         </div>
 
         {/* Table */}
         <div className="overflow-x-auto rounded-lg border border-slate-700">
           <table className="table w-full text-white">
-
-            {/* Table Head */}
             <thead className="bg-black text-white">
               <tr>
                 <th>#</th>
@@ -120,77 +107,50 @@ const DonorList = () => {
                 <th>Division</th>
                 <th>Phone</th>
                 <th>Status</th>
-                
               </tr>
             </thead>
-
-            {/* Table Body */}
             <tbody>
               {filteredDonors.map((donor, index) => (
                 <tr
-                  key={donor.id}
-                  className={`
-                    ${
-                      index % 2 === 0
-                        ? "bg-slate-900"
-                        : "bg-slate-800"
-                    }
-                    hover:bg-slate-700 transition
-                  `}
+                  key={donor.id || index}
+                  className={`${
+                    index % 2 === 0 ? "bg-slate-900" : "bg-slate-800"
+                  } hover:bg-slate-700 transition`}
                 >
                   <td className="text-white">{index + 1}</td>
-
                   <td>
-                    <h2 className="font-semibold text-white">
-                      {donor.name}
-                    </h2>
-                    <p className="text-xs text-slate-400">
-                      {donor.id}
-                    </p>
+                    <h2 className="font-semibold text-white">{donor.name}</h2>
+                    <p className="text-xs text-slate-400">{donor.id}</p>
                   </td>
-
                   <td>
                     <span className="font-bold text-red-400">
                       {donor.bloodGroup}
                     </span>
                   </td>
-
                   <td>{donor.division}</td>
-
                   <td>{donor.phone}</td>
-
                   <td>
                     <span
-                      className={`badge ${
-                        donor.available
-                          ? "badge-success"
-                          : "badge-error"
+                      className={`px-3 py-1 rounded-sm text-white font-medium ${
+                        donor.available ? "bg-green-600" : "bg-red-600"
                       }`}
                     >
-                      {donor.available
-                        ? "Available"
-                        : "Unavailable"}
+                      {donor.available ? "Available" : "Unavailable"}
                     </span>
                   </td>
-                 
                 </tr>
               ))}
 
               {filteredDonors.length === 0 && (
                 <tr>
-                  <td
-                    colSpan="6"
-                    className="text-center py-8 text-white"
-                  >
+                  <td colSpan="6" className="text-center py-8 text-white">
                     No donor found.
                   </td>
                 </tr>
               )}
             </tbody>
-
           </table>
         </div>
-
       </div>
     </div>
   );
