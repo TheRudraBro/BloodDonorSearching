@@ -1,7 +1,6 @@
-// DonorList.jsx
 import React, { useState } from "react";
 
-const DonorList = ({ donors }) => { // Props থেকে donors গ্রহণ করা হলো
+const DonorList = ({ donors }) => {
   const [bloodGroup, setBloodGroup] = useState("");
   const [division, setDivision] = useState("");
   const [availability, setAvailability] = useState("");
@@ -39,8 +38,8 @@ const DonorList = ({ donors }) => { // Props থেকে donors গ্রহণ
           Blood Donor List
         </h2>
 
-        {/* Search & Filter Section */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-center">
+        {/* Search & Filter */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <input
             type="text"
             placeholder="Search Name / ID / Phone"
@@ -90,11 +89,11 @@ const DonorList = ({ donors }) => { // Props থেকে donors গ্রহণ
             <option value="true">Available</option>
             <option value="false">Unavailable</option>
           </select>
-
-          <h2 className="text-white font-bold text-lg col-span-1 md:col-span-4">
-            {filteredDonors.length} Donors Found
-          </h2>
         </div>
+
+        <h2 className="text-white font-bold text-lg mb-4">
+          {filteredDonors.length} Donors Found
+        </h2>
 
         {/* Table */}
         <div className="overflow-x-auto rounded-lg border border-slate-700">

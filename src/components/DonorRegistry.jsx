@@ -1,4 +1,3 @@
-// DonorRegistry.jsx
 import React from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -8,17 +7,16 @@ const DonorRegistry = ({ divisions, bloodGroups, donors, setDonors }) => {
   const onSubmit = (data) => {
     const newDonor = {
       ...data,
-      id: `DN-${1000 + donors.length + 1}`, // dynamically DN-1051, DN-1052...
+      id: `DN-${1000 + donors.length + 1}`,
       available: true
     };
 
-    // নতুন ডোনরকে লিস্টের শুরুতে রাখতে চাইলে: [newDonor, ...donors]
-    setDonors([...donors, newDonor]); 
-    reset(); // ফর্ম রিমেট করার জন্য
+    setDonors([...donors, newDonor]);
+    reset();
   };
 
   return (
-    <div className="card bg-slate-900 shadow-sm">
+    <div className="card bg-slate-900 shadow-sm border border-slate-700">
       <div className="card-body">
         <h2 className="text-3xl font-bold text-white mb-6">Donor Registry</h2>
 
@@ -27,7 +25,7 @@ const DonorRegistry = ({ divisions, bloodGroups, donors, setDonors }) => {
             type="text" 
             {...register("name", { required: true })} 
             placeholder="Type your full name here" 
-            className="input input-bordered w-full bg-slate-800 text-white border-slate-700" 
+            className="input input-bordered w-full bg-slate-800 text-white border-slate-700 placeholder:text-slate-400" 
           />
 
           <select 
@@ -52,12 +50,11 @@ const DonorRegistry = ({ divisions, bloodGroups, donors, setDonors }) => {
             ))}
           </select>
 
-          {/* contact-এর জায়গায় phone ব্যবহার করা হয়েছে */}
           <input 
             type="text" 
             {...register("phone", { required: true })} 
             placeholder="Type your Contact Number here" 
-            className="input input-bordered w-full bg-slate-800 text-white border-slate-700" 
+            className="input input-bordered w-full bg-slate-800 text-white border-slate-700 placeholder:text-slate-400" 
           />
 
           <button type="submit" className="btn btn-primary col-span-1 md:col-span-2">
