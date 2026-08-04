@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import DonorRegistry from './components/DonorRegistry';
 import DonorList from './components/DonorList';
+import DonorMap from './components/DonorMap';
 import DonorFind from './components/DonorFind';
+import DonorGoogleMap from './components/DonorGoogleMap'; // Map Import করা হলো
 
 const divisions = [
   "Dhaka",
@@ -41,7 +43,7 @@ const computeScore = (donor, requestedBloodData) => {
     return 100;
   }
 
-  // ৩. বাকি সামঞ্জস্যপূর্ণ ব্লাড গ্রুপ (যেমন: A+ এর ক্ষেত্রে A-, O+, O-) বা আলাদা ডিভিশনের ক্ষেত্রে = ৭০ পয়েন্ট
+  // ৩. বাকি সামঞ্জস্যপূর্ণ ব্লাড গ্রুপ বা আলাদা ডিভিশনের ক্ষেত্রে = ৭০ পয়েন্ট
   return 70;
 };
 
@@ -101,6 +103,13 @@ function App() {
           setRequestedBloodData={setRequestedBloodData}
           matchedDonors={matchedList}
         />
+        <DonorMap donors={matchedList.length > 0 ? matchedList : donors} />
+
+        {/* Google Map Display: সার্চ করলে ফিল্টার করা ডোনার দেখাবে, নাহলে সব ডোনার দেখাবে */}
+        <DonorGoogleMap 
+          donors={matchedList.length > 0 ? matchedList : donors} 
+        />
+
         <DonorList donors={donors} />
       </div>   
     </div>
