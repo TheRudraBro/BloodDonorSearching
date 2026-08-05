@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import DonorRegistry from './components/DonorRegistry';
 import DonorList from './components/DonorList';
-import DonorMap from './components/DonorMap';
 import DonorFind from './components/DonorFind';
-import DonorGoogleMap from './components/DonorGoogleMap'; // Map Import করা হলো
+import DonorMap from './components/DonorMap'; // অথবা DonorGoogleMap
 
 const divisions = [
   "Dhaka",
@@ -29,13 +28,11 @@ const bloodCompatibility = {
 };
 
 const computeScore = (donor, requestedBloodData) => {
-  // ১. ব্লাড গ্রুপ পুরোপুরি আলাদা হলে সরাসরি 0 পয়েন্ট
   const allowedDonors = bloodCompatibility[requestedBloodData.bloodGroup] ?? [];
   if (!allowedDonors.includes(donor.bloodGroup)) {
     return 0;
   }
 
-  // ২. ব্লাড গ্রুপ হুবহু এক এবং ডিভিশনও এক = ১০০ পয়েন্ট
   if (
     donor.bloodGroup === requestedBloodData.bloodGroup &&
     donor.division === requestedBloodData.division
@@ -43,7 +40,6 @@ const computeScore = (donor, requestedBloodData) => {
     return 100;
   }
 
-  // ৩. বাকি সামঞ্জস্যপূর্ণ ব্লাড গ্রুপ বা আলাদা ডিভিশনের ক্ষেত্রে = ৭০ পয়েন্ট
   return 70;
 };
 
@@ -54,7 +50,9 @@ function App() {
   const [requestedBloodData, setRequestedBloodData] = useState({
     name: "",
     bloodGroup: "",
-    division: ""
+    division: "",
+    zila: "",
+    thana: ""
   });
 
   const matchesDonors = () => {
@@ -67,7 +65,15 @@ function App() {
         ...donor,
         score: computeScore(donor, requestedBloodData)
       }))
-      .filter(donor => donor.score > 0)
+      .filter(donor => {
+        if (donor.score === 0) return false;
+
+        // জেলা ও থানা ফিল্টারিং (যদি সিলেক্ট করা থাকে)
+        const matchZila = !requestedBloodData.zila || donor.zila === requestedBloodData.zila;
+        const matchThana = !requestedBloodData.thana || donor.thana === requestedBloodData.thana;
+
+        return matchZila && matchThana;
+      })
       .sort((a, b) => b.score - a.score);
   };
 
@@ -103,12 +109,9 @@ function App() {
           setRequestedBloodData={setRequestedBloodData}
           matchedDonors={matchedList}
         />
-        <DonorMap donors={matchedList.length > 0 ? matchedList : donors} />
 
-        {/* Google Map Display: সার্চ করলে ফিল্টার করা ডোনার দেখাবে, নাহলে সব ডোনার দেখাবে */}
-        <DonorGoogleMap 
-          donors={matchedList.length > 0 ? matchedList : donors} 
-        />
+        {/* শুধু ব্লাড গ্রুপ সিলেক্ট করলেই ম্যাপে রেজাল্ট দেখাবে */}
+        <DonorMap donors={requestedBloodData.bloodGroup ? matchedList : []} />
 
         <DonorList donors={donors} />
       </div>   
