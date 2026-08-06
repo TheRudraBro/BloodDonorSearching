@@ -2,7 +2,7 @@ import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
-// রেড মার্কার আইকন
+// Red Marker Icon
 const redIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -33,19 +33,31 @@ const DonorMap = ({ donors }) => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {donors.map((donor) => {
+            {donors.map((donor, index) => {
               if (!donor.lat || !donor.lng) return null;
+
+              // Marker Offset Logic: একই থানার একাধিক ডোনার থাকলে পিনগুলো সামান্য সরিয়ে পাশাপাশি দেখাবে
+              const offsetLat = parseFloat(donor.lat) + (index * 0.0004);
+              const offsetLng = parseFloat(donor.lng) + (index * 0.0004);
+
               return (
                 <Marker 
-                  key={donor.id} 
-                  position={[parseFloat(donor.lat), parseFloat(donor.lng)]}
+                  key={donor.id || index} 
+                  position={[offsetLat, offsetLng]}
                   icon={redIcon}
                 >
                   <Popup>
                     <div className="p-1 text-slate-900">
                       <h3 className="font-bold text-base">{donor.name}</h3>
-                      <p className="text-xs font-bold text-red-600">Blood: {donor.bloodGroup}</p>
-                      <p className="text-xs">📍 {donor.division}</p>
+                      <p className="text-xs font-bold text-red-600">Blood Group: {donor.bloodGroup}</p>
+                      
+                      {/* Specific Area সহ ফুল অ্যাড্রেস */}
+                      <p className="text-xs text-slate-700 mt-1">
+                        📍 <strong>{donor.area ? `${donor.area}, ` : ''}</strong>
+                        {donor.thana ? `${donor.thana}, ` : ''}
+                        {donor.zila ? `${donor.zila}` : donor.division}
+                      </p>
+
                       <a 
                         href={`tel:${donor.phone}`} 
                         className="btn btn-xs bg-red-600 hover:bg-red-700 text-white border-none mt-2 w-full block text-center py-1 rounded font-bold"
