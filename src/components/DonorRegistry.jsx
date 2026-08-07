@@ -1,39 +1,86 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import { bdLocations } from '../data/bdLocations';
+
+// Red Marker Icon
+const redIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+// ম্যাপে ক্লিক বা ড্র্যাগ করে পিন সরানোর কম্পোনেন্ট
+function DraggableMarker({ position, setPosition }) {
+  useMapEvents({
+    click(e) {
+      setPosition([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+
+  return (
+    <Marker
+      position={position}
+      draggable={true}
+      icon={redIcon}
+      eventHandlers={{
+        dragend(e) {
+          const marker = e.target;
+          const pos = marker.getLatLng();
+          setPosition([pos.lat, pos.lng]);
+        },
+      }}
+    />
+  );
+}
 
 const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
   const { register, handleSubmit, reset, setValue } = useForm();
   const [selectedDiv, setSelectedDiv] = useState("");
   const [selectedZila, setSelectedZila] = useState("");
-  const [coords, setCoords] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [markerPos, setMarkerPos] = useState([23.8103, 90.4125]); // Default Dhaka
 
-  // GPS Coordinates Fetch
-  const handleGetLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const loc = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          setCoords(loc);
-          alert("📍 Current location captured successfully!");
-        },
-        () => alert("⚠️ Failed to fetch location. Please allow GPS access.")
-      );
-    } else {
-      alert("⚠️ Geolocation is not supported by your browser.");
+  // ঠিকানা থেকে হাউজ/রোড নম্বর ফিল্টার করে মূল এলাকা দিয়ে Geocoding করার লজিক
+  const handleSmartGeocode = async (thana, zila, rawArea) => {
+    if (!thana || !zila) return;
+
+    try {
+      // "30 number house, 16 number road, Rupnagar" -> ফিল্টার করে কেবল "Rupnagar" বের করবে
+      let cleanArea = rawArea ? rawArea.replace(/(house|road|no|number|রোড|বাসা|নম্বর|\d+)/gi, '').replace(/,/g, ' ').trim() : '';
+      
+      let searchQuery = `${cleanArea ? cleanArea + ', ' : ''}${thana}, ${zila}, Bangladesh`;
+      
+      let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
+      let geoData = await res.json();
+
+      // যদি ফিল্টার করা এলাকা না পায়, ব্যাকআপ হিসেবে শুধু থানা+জেলা দিয়ে সার্চ করবে
+      if (!geoData || geoData.length === 0) {
+        searchQuery = `${thana}, ${zila}, Bangladesh`;
+        res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
+        geoData = await res.json();
+      }
+
+      if (geoData && geoData.length > 0) {
+        setMarkerPos([parseFloat(geoData[0].lat), parseFloat(geoData[0].lon)]);
+      }
+    } catch (err) {
+      console.error("Geocoding Error:", err);
     }
   };
 
   const onSubmit = (data) => {
+    setLoading(true);
+
     const newDonor = {
       ...data,
       id: `DN-${1000 + donors.length + 1}`,
-      // GPS ইউজ না করলে ডিফল্ট ঢাকা সেন্টার কোঅর্ডিনেট সেট হবে
-      lat: coords?.lat || 23.8103, 
-      lng: coords?.lng || 90.4125,
+      lat: markerPos[0], // ম্যাপের নিখুঁত পয়েন্ট
+      lng: markerPos[1],
       available: true
     };
 
@@ -41,7 +88,8 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
     reset();
     setSelectedDiv("");
     setSelectedZila("");
-    setCoords(null);
+    setLoading(false);
+    alert("✅ Registration complete with exact location!");
   };
 
   return (
@@ -50,7 +98,7 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
         <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
           <span>📝</span> Register as a Blood Donor
         </h2>
-        <p className="text-slate-400 text-xs mb-6">Your registration can help save lives in emergency situations.</p>
+        <p className="text-slate-400 text-xs mb-6">Enter address and adjust the pin on the map if needed.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Full Name */}
@@ -127,6 +175,10 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
               className="select select-bordered w-full bg-slate-800 text-white border-slate-700 focus:border-red-500"
               disabled={!selectedZila}
               {...register("thana", { required: true })}
+              onChange={(e) => {
+                setValue("thana", e.target.value);
+                handleSmartGeocode(e.target.value, selectedZila, "");
+              }}
             >
               <option value="" disabled>Select Thana</option>
               {selectedZila && (bdLocations[selectedDiv]?.[selectedZila] || []).map((thana) => (
@@ -141,8 +193,12 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
             <input 
               type="text" 
               {...register("area")} 
-              placeholder="e.g. Mirpur 10, Block C, Road 4" 
+              placeholder="e.g. Rupnagar, Road 16, House 30" 
               className="input input-bordered w-full bg-slate-800 text-white border-slate-700 focus:border-red-500 placeholder:text-slate-500" 
+              onBlur={(e) => {
+                const currentThana = document.querySelector('select[name="thana"]').value;
+                handleSmartGeocode(currentThana, selectedZila, e.target.value);
+              }}
             />
           </div>
 
@@ -157,18 +213,30 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className="col-span-1 md:col-span-2 flex flex-col sm:flex-row gap-3 mt-2">
-            <button 
-              type="button" 
-              onClick={handleGetLocation} 
-              className={`btn border-none text-white ${coords ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-700 hover:bg-slate-600'}`}
-            >
-              📍 {coords ? 'GPS Location Pinpoint' : 'Capture Current Location'}
-            </button>
+          {/* Interactive Map Preview */}
+          <div className="col-span-1 md:col-span-2 mt-2">
+            <label className="label text-slate-300 text-xs font-semibold mb-1">
+              📍 Exact Pin Location (Drag marker to adjust):
+            </label>
+            <div className="h-[220px] w-full rounded-lg overflow-hidden border border-slate-700">
+              <MapContainer center={markerPos} zoom={13} style={{ height: "100%", width: "100%" }}>
+                <TileLayer
+                  attribution='&copy; OpenStreetMap'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <DraggableMarker position={markerPos} setPosition={setMarkerPos} />
+              </MapContainer>
+            </div>
+          </div>
 
-            <button type="submit" className="btn bg-red-600 hover:bg-red-700 text-white border-none flex-1 font-bold">
-              Complete Registration
+          {/* Submit Button */}
+          <div className="col-span-1 md:col-span-2 mt-2">
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="btn bg-red-600 hover:bg-red-700 text-white border-none w-full font-bold"
+            >
+              {loading ? "Registering..." : "Complete Registration"}
             </button>
           </div>
         </form>

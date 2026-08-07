@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 // Red Marker Icon
@@ -11,6 +11,24 @@ const redIcon = new L.Icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
+
+// সার্চ করা নতুন ডোনারের পয়েন্টে ম্যাপের ভিউ ফোকাস করানোর হেল্পার কম্পোনেন্ট
+const MapFocus = ({ donors }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (donors && donors.length > 0) {
+      const firstDonor = donors[0];
+      if (firstDonor.lat && firstDonor.lng) {
+        map.setView([parseFloat(firstDonor.lat), parseFloat(firstDonor.lng)], 12, {
+          animate: true
+        });
+      }
+    }
+  }, [donors, map]);
+
+  return null;
+};
 
 const DonorMap = ({ donors }) => {
   const defaultCenter = [23.8103, 90.4125]; // Dhaka Center
@@ -33,12 +51,14 @@ const DonorMap = ({ donors }) => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
+            <MapFocus donors={donors} />
+
             {donors.map((donor, index) => {
               if (!donor.lat || !donor.lng) return null;
 
-              // Marker Offset Logic: একই থানার একাধিক ডোনার থাকলে পিনগুলো সামান্য সরিয়ে পাশাপাশি দেখাবে
-              const offsetLat = parseFloat(donor.lat) + (index * 0.0004);
-              const offsetLng = parseFloat(donor.lng) + (index * 0.0004);
+              // একাধিক ডোনার এক জায়গায় থাকলে সামান্য Offset তৈরি করে আলাদা পিন বসাবে
+              const offsetLat = parseFloat(donor.lat) + (index * 0.0003);
+              const offsetLng = parseFloat(donor.lng) + (index * 0.0003);
 
               return (
                 <Marker 
@@ -51,7 +71,6 @@ const DonorMap = ({ donors }) => {
                       <h3 className="font-bold text-base">{donor.name}</h3>
                       <p className="text-xs font-bold text-red-600">Blood Group: {donor.bloodGroup}</p>
                       
-                      {/* Specific Area সহ ফুল অ্যাড্রেস */}
                       <p className="text-xs text-slate-700 mt-1">
                         📍 <strong>{donor.area ? `${donor.area}, ` : ''}</strong>
                         {donor.thana ? `${donor.thana}, ` : ''}
