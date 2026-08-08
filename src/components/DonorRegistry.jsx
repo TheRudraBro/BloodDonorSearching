@@ -4,7 +4,6 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { bdLocations } from '../data/bdLocations';
 
-// Red Marker Icon
 const redIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -14,7 +13,6 @@ const redIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-// ম্যাপে ক্লিক বা ড্র্যাগ করে পিন সরানোর কম্পোনেন্ট
 function DraggableMarker({ position, setPosition }) {
   useMapEvents({
     click(e) {
@@ -43,22 +41,18 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
   const [selectedDiv, setSelectedDiv] = useState("");
   const [selectedZila, setSelectedZila] = useState("");
   const [loading, setLoading] = useState(false);
-  const [markerPos, setMarkerPos] = useState([23.8103, 90.4125]); // Default Dhaka
+  const [markerPos, setMarkerPos] = useState([23.8103, 90.4125]);
 
-  // ঠিকানা থেকে হাউজ/রোড নম্বর ফিল্টার করে মূল এলাকা দিয়ে Geocoding করার লজিক
   const handleSmartGeocode = async (thana, zila, rawArea) => {
     if (!thana || !zila) return;
 
     try {
-      // "30 number house, 16 number road, Rupnagar" -> ফিল্টার করে কেবল "Rupnagar" বের করবে
       let cleanArea = rawArea ? rawArea.replace(/(house|road|no|number|রোড|বাসা|নম্বর|\d+)/gi, '').replace(/,/g, ' ').trim() : '';
-      
       let searchQuery = `${cleanArea ? cleanArea + ', ' : ''}${thana}, ${zila}, Bangladesh`;
       
       let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
       let geoData = await res.json();
 
-      // যদি ফিল্টার করা এলাকা না পায়, ব্যাকআপ হিসেবে শুধু থানা+জেলা দিয়ে সার্চ করবে
       if (!geoData || geoData.length === 0) {
         searchQuery = `${thana}, ${zila}, Bangladesh`;
         res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
@@ -79,9 +73,10 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
     const newDonor = {
       ...data,
       id: `DN-${1000 + donors.length + 1}`,
-      lat: markerPos[0], // ম্যাপের নিখুঁত পয়েন্ট
+      lat: markerPos[0],
       lng: markerPos[1],
-      available: true
+      available: true,
+      isVerified: true
     };
 
     setDonors([newDonor, ...donors]);
@@ -89,7 +84,7 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
     setSelectedDiv("");
     setSelectedZila("");
     setLoading(false);
-    alert("✅ Registration complete with exact location!");
+    alert("✅ Registration complete with verified profile!");
   };
 
   return (
@@ -101,7 +96,6 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
         <p className="text-slate-400 text-xs mb-6">Enter address and adjust the pin on the map if needed.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Full Name */}
           <div>
             <label className="label text-slate-300 text-xs font-semibold">Full Name *</label>
             <input 
@@ -112,7 +106,6 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
             />
           </div>
 
-          {/* Blood Group */}
           <div>
             <label className="label text-slate-300 text-xs font-semibold">Blood Group *</label>
             <select 
@@ -127,7 +120,6 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
             </select>
           </div>
 
-          {/* Division */}
           <div>
             <label className="label text-slate-300 text-xs font-semibold">Division *</label>
             <select 
@@ -147,7 +139,6 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
             </select>
           </div>
 
-          {/* Zila */}
           <div>
             <label className="label text-slate-300 text-xs font-semibold">Zila (District) *</label>
             <select 
@@ -167,7 +158,6 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
             </select>
           </div>
 
-          {/* Thana */}
           <div>
             <label className="label text-slate-300 text-xs font-semibold">Thana / Upazila *</label>
             <select 
@@ -187,7 +177,6 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
             </select>
           </div>
 
-          {/* Specific Area / Road */}
           <div>
             <label className="label text-slate-300 text-xs font-semibold">Specific Area / Road</label>
             <input 
@@ -202,8 +191,16 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
             />
           </div>
 
-          {/* Contact Phone Number */}
-          <div className="col-span-1 md:col-span-2">
+          <div>
+            <label className="label text-slate-300 text-xs font-semibold">Last Donated Date (Optional)</label>
+            <input 
+              type="date" 
+              {...register("lastDonatedDate")} 
+              className="input input-bordered w-full bg-slate-800 text-white border-slate-700 focus:border-red-500" 
+            />
+          </div>
+
+          <div>
             <label className="label text-slate-300 text-xs font-semibold">Contact Phone Number *</label>
             <input 
               type="text" 
@@ -213,7 +210,6 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
             />
           </div>
 
-          {/* Interactive Map Preview */}
           <div className="col-span-1 md:col-span-2 mt-2">
             <label className="label text-slate-300 text-xs font-semibold mb-1">
               📍 Exact Pin Location (Drag marker to adjust):
@@ -229,7 +225,6 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
             </div>
           </div>
 
-          {/* Submit Button */}
           <div className="col-span-1 md:col-span-2 mt-2">
             <button 
               type="submit" 

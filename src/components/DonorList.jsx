@@ -1,5 +1,16 @@
 import React, { useState } from "react";
 
+const checkEligibility = (lastDateStr) => {
+  if (!lastDateStr) return { eligible: true, daysLeft: 0 };
+  const lastDate = new Date(lastDateStr);
+  const today = new Date();
+  const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+  if (diffDays >= 90) {
+    return { eligible: true, daysLeft: 0 };
+  }
+  return { eligible: false, daysLeft: 90 - diffDays };
+};
+
 const DonorList = ({ donors }) => {
   const [bloodGroup, setBloodGroup] = useState("");
   const [division, setDivision] = useState("");
@@ -35,7 +46,7 @@ const DonorList = ({ donors }) => {
           </span>
         </div>
 
-        {/* Search & Filter Bar */}
+        {/* Filter Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <input
             type="text"
@@ -96,57 +107,67 @@ const DonorList = ({ donors }) => {
                 <th>#</th>
                 <th>Donor Info</th>
                 <th>Group</th>
-                <th>Address (Area, Thana, Zila)</th>
-                <th>Phone</th>
-                <th>Status</th>
+                <th>Address</th>
+                <th>Eligibility</th>
+                <th>Contact</th>
               </tr>
             </thead>
             <tbody>
-              {filteredDonors.map((donor, index) => (
-                <tr
-                  key={donor.id || index}
-                  className={`${
-                    index % 2 === 0 ? "bg-slate-900" : "bg-slate-800/40"
-                  } hover:bg-slate-800 transition border-b border-slate-800/50`}
-                >
-                  <td className="text-slate-500 font-mono text-xs">{index + 1}</td>
-                  <td>
-                    <h3 className="font-semibold text-white text-sm">{donor.name}</h3>
-                    <p className="text-[10px] text-slate-500 font-mono">{donor.id}</p>
-                  </td>
-                  <td>
-                    <span className="font-extrabold text-red-500 bg-red-500/10 px-2.5 py-1 rounded text-xs border border-red-500/20">
-                      {donor.bloodGroup}
-                    </span>
-                  </td>
-                  <td className="text-xs text-slate-300">
-                    {donor.area ? `${donor.area}, ` : ''}
-                    {donor.thana ? `${donor.thana}, ` : ''}
-                    {donor.zila ? donor.zila : donor.division}
-                  </td>
-                  <td className="text-xs text-slate-300 font-mono">{donor.phone}</td>
-                  <td>
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${
-                        donor.available
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${donor.available ? "bg-emerald-400" : "bg-rose-400"}`} />
-                      {donor.available ? "Available" : "Unavailable"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {filteredDonors.map((donor, index) => {
+                const eligibility = checkEligibility(donor.lastDonatedDate);
 
-              {filteredDonors.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="text-center py-10 text-slate-500 text-sm">
-                    No donors match your search criteria.
-                  </td>
-                </tr>
-              )}
+                return (
+                  <tr
+                    key={donor.id || index}
+                    className={`${
+                      index % 2 === 0 ? "bg-slate-900" : "bg-slate-800/40"
+                    } hover:bg-slate-800 transition border-b border-slate-800/50`}
+                  >
+                    <td className="text-slate-500 font-mono text-xs">{index + 1}</td>
+                    <td>
+                      <h3 className="font-semibold text-white text-sm flex items-center gap-1">
+                        {donor.name}
+                        {donor.isVerified && (
+                          <span className="text-blue-400 text-xs font-bold" title="Verified">✓</span>
+                        )}
+                      </h3>
+                      <p className="text-[10px] text-slate-500 font-mono">{donor.id}</p>
+                    </td>
+                    <td>
+                      <span className="font-extrabold text-red-500 bg-red-500/10 px-2.5 py-1 rounded text-xs border border-red-500/20">
+                        {donor.bloodGroup}
+                      </span>
+                    </td>
+                    <td className="text-xs text-slate-300">
+                      {donor.area ? `${donor.area}, ` : ''}
+                      {donor.thana ? `${donor.thana}, ` : ''}
+                      {donor.zila ? donor.zila : donor.division}
+                    </td>
+                    <td>
+                      {eligibility.eligible ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          Ready to Donate
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          Cool-down ({eligibility.daysLeft}d)
+                        </span>
+                      )}
+                    </td>
+                    <td className="text-xs text-slate-300 font-mono flex items-center gap-2">
+                      <span>{donor.phone}</span>
+                      <a 
+                        href={`https://wa.me/88${donor.phone}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-emerald-400 hover:underline text-xs"
+                      >
+                        💬
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
