@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-// Red Marker Icon
+// Fix Marker Icon Path Issues in Leaflet React
 const redIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -12,7 +12,7 @@ const redIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-// সার্চ করা নতুন ডোনারের পয়েন্টে ম্যাপের ভিউ ফোকাস করানোর হেল্পার কম্পোনেন্ট
+// Auto focus map component
 const MapFocus = ({ donors }) => {
   const map = useMap();
 
@@ -20,8 +20,8 @@ const MapFocus = ({ donors }) => {
     if (donors && donors.length > 0) {
       const firstDonor = donors[0];
       if (firstDonor.lat && firstDonor.lng) {
-        map.setView([parseFloat(firstDonor.lat), parseFloat(firstDonor.lng)], 12, {
-          animate: true
+        map.flyTo([parseFloat(firstDonor.lat), parseFloat(firstDonor.lng)], 12, {
+          duration: 1.5
         });
       }
     }
@@ -34,17 +34,20 @@ const DonorMap = ({ donors }) => {
   const defaultCenter = [23.8103, 90.4125]; // Dhaka Center
 
   return (
-    <div className="card bg-slate-900 border border-slate-700 shadow-xl overflow-hidden">
+    <div className="card bg-slate-900 border border-slate-700 shadow-xl overflow-hidden relative z-0">
       <div className="card-body p-4">
         <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
           🗺️ Donor Location Map ({donors.length} Donors Pinned)
         </h2>
 
-        <div className="h-[420px] w-full rounded-lg overflow-hidden border border-slate-700">
+        {/* Map Container with Scroll and Touch Enable */}
+        <div className="h-[420px] w-full rounded-lg overflow-hidden border border-slate-700 relative z-0">
           <MapContainer 
             center={defaultCenter} 
             zoom={7} 
-            style={{ height: "100%", width: "100%" }}
+            scrollWheelZoom={true} 
+            dragging={true}
+            style={{ height: "100%", width: "100%", zIndex: 0 }}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -56,9 +59,9 @@ const DonorMap = ({ donors }) => {
             {donors.map((donor, index) => {
               if (!donor.lat || !donor.lng) return null;
 
-              // একাধিক ডোনার এক জায়গায় থাকলে সামান্য Offset তৈরি করে আলাদা পিন বসাবে
               const offsetLat = parseFloat(donor.lat) + (index * 0.0003);
               const offsetLng = parseFloat(donor.lng) + (index * 0.0003);
+              const cleanPhone = donor.phone ? donor.phone.replace(/[^0-9]/g, '') : '';
 
               return (
                 <Marker 
@@ -67,7 +70,7 @@ const DonorMap = ({ donors }) => {
                   icon={redIcon}
                 >
                   <Popup>
-                    <div className="p-1 text-slate-900">
+                    <div className="p-1 text-slate-900 min-w-[160px]">
                       <h3 className="font-bold text-base">{donor.name}</h3>
                       <p className="text-xs font-bold text-red-600">Blood Group: {donor.bloodGroup}</p>
                       
@@ -77,12 +80,22 @@ const DonorMap = ({ donors }) => {
                         {donor.zila ? `${donor.zila}` : donor.division}
                       </p>
 
-                      <a 
-                        href={`tel:${donor.phone}`} 
-                        className="btn btn-xs bg-red-600 hover:bg-red-700 text-white border-none mt-2 w-full block text-center py-1 rounded font-bold"
-                      >
-                        📞 Call {donor.phone}
-                      </a>
+                      <div className="flex gap-1 mt-2">
+                        <a 
+                          href={`tel:${cleanPhone}`} 
+                          className="btn btn-xs bg-red-600 hover:bg-red-700 text-white border-none flex-1 text-center font-bold py-1 rounded"
+                        >
+                          📞 Call
+                        </a>
+                        <a 
+                          href={`https://api.whatsapp.com/send?phone=88${cleanPhone}`} 
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-xs bg-emerald-600 hover:bg-emerald-700 text-white border-none flex-1 text-center font-bold py-1 rounded"
+                        >
+                          💬 WA
+                        </a>
+                      </div>
                     </div>
                   </Popup>
                 </Marker>

@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { bdLocations } from '../data/bdLocations';
 
-// ৯০ দিন (৩ মাস) পার হয়েছে কিনা চেক করার হেল্পার ফাঙ্গশন
 const checkEligibility = (lastDateStr) => {
   if (!lastDateStr) return { eligible: true, daysLeft: 0 };
   const lastDate = new Date(lastDateStr);
@@ -20,8 +19,35 @@ const DonorFind = ({
   setRequestedBloodData, 
   matchedDonors = [] 
 }) => {
-  const [selectedDiv, setSelectedDiv] = useState("");
-  const [selectedZila, setSelectedZila] = useState("");
+  const [selectedDiv, setSelectedDiv] = React.useState("");
+  const [selectedZila, setSelectedZila] = React.useState("");
+
+  // Fix: Reliable PDF Download Handler
+  const handleDownloadPDF = () => {
+    const element = document.getElementById("matched-donors-pdf-content");
+    if (!element) {
+      alert("PDF Content area not ready!");
+      return;
+    }
+
+    element.style.display = "block"; // Temporarily show for capture
+
+    const opt = {
+      margin:       0.4,
+      filename:     `Matched_Blood_Donors_${requestedBloodData.bloodGroup || 'List'}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    if (window.html2pdf) {
+      window.html2pdf().set(opt).from(element).save().then(() => {
+        element.style.display = "none"; // Hide after capture
+      });
+    } else {
+      alert("PDF library loading error. Please refresh the page.");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -102,16 +128,30 @@ const DonorFind = ({
             </select>
           </div>
 
-          {/* Results */}
+          {/* Results Area */}
           {requestedBloodData.bloodGroup && (
             <div className="mt-4 border-t border-slate-800 pt-4">
-              <h3 className="text-lg font-bold text-white mb-3">
-                Matched Donors Found ({matchedDonors.length})
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">
+                  Matched Donors Found ({matchedDonors.length})
+                </h3>
 
+                {matchedDonors.length > 0 && (
+                  <button 
+                    type="button"
+                    onClick={handleDownloadPDF} 
+                    className="btn btn-sm bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 gap-1 font-bold z-10"
+                  >
+                    📄 Download PDF Report
+                  </button>
+                )}
+              </div>
+
+              {/* Display Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {matchedDonors.map((donor) => {
                   const eligibility = checkEligibility(donor.lastDonatedDate);
+                  const cleanPhone = donor.phone ? donor.phone.replace(/[^0-9]/g, '') : '';
 
                   return (
                     <div key={donor.id} className="p-4 bg-slate-800/90 rounded-xl border border-slate-700 flex justify-between flex-col space-y-3 shadow-lg">
@@ -130,7 +170,6 @@ const DonorFind = ({
                           📍 {donor.area ? `${donor.area}, ` : ''}{donor.thana}, {donor.zila}
                         </p>
 
-                        {/* Eligibility Calculator Badge */}
                         <div className="mt-2">
                           {eligibility.eligible ? (
                             <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
@@ -147,18 +186,22 @@ const DonorFind = ({
                       <div className="flex items-center justify-between pt-2 border-t border-slate-700/80 gap-2">
                         <span className="text-xs font-bold text-amber-400">{donor.score} PTS</span>
                         
-                        <div className="flex gap-1.5">
-                          {/* Direct WhatsApp Message Link */}
+                        <div className="flex gap-2">
+                          {/* Working WhatsApp Link */}
                           <a 
-                            href={`https://wa.me/88${donor.phone}?text=${encodeURIComponent(`Emergency! Need ${donor.bloodGroup} blood at ${requestedBloodData.zila || 'your location'}. Are you available?`)}`} 
+                            href={`https://api.whatsapp.com/send?phone=88${cleanPhone}&text=${encodeURIComponent(`Emergency! Need ${donor.bloodGroup} blood at ${requestedBloodData.zila || 'your location'}. Are you available?`)}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="btn btn-xs bg-emerald-600 hover:bg-emerald-700 text-white border-none font-bold"
+                            className="btn btn-xs bg-emerald-600 hover:bg-emerald-700 text-white border-none font-bold px-3"
                           >
                             💬 WA
                           </a>
 
-                          <a href={`tel:${donor.phone}`} className="btn btn-xs bg-red-600 hover:bg-red-700 text-white border-none font-bold">
+                          {/* Working Direct Call Link */}
+                          <a 
+                            href={`tel:${cleanPhone}`} 
+                            className="btn btn-xs bg-red-600 hover:bg-red-700 text-white border-none font-bold px-3"
+                          >
                             📞 Call
                           </a>
                         </div>
@@ -167,6 +210,34 @@ const DonorFind = ({
                   );
                 })}
               </div>
+
+              {/* Hidden Template For PDF Export Only */}
+              <div id="matched-donors-pdf-content" style={{ display: "none" }} className="p-4 bg-white text-slate-900">
+                <h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "10px", color: "#dc2626" }}>
+                  Matched Blood Donors Report ({requestedBloodData.bloodGroup})
+                </h2>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                  <thead>
+                    <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
+                      <th style={{ padding: "8px", border: "1px solid #ddd" }}>Name</th>
+                      <th style={{ padding: "8px", border: "1px solid #ddd" }}>Blood</th>
+                      <th style={{ padding: "8px", border: "1px solid #ddd" }}>Address</th>
+                      <th style={{ padding: "8px", border: "1px solid #ddd" }}>Phone</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matchedDonors.map(d => (
+                      <tr key={d.id}>
+                        <td style={{ padding: "8px", border: "1px solid #ddd" }}>{d.name}</td>
+                        <td style={{ padding: "8px", border: "1px solid #ddd" }}>{d.bloodGroup}</td>
+                        <td style={{ padding: "8px", border: "1px solid #ddd" }}>{d.area ? `${d.area}, ` : ''}{d.thana}, {d.zila}</td>
+                        <td style={{ padding: "8px", border: "1px solid #ddd" }}>{d.phone}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
             </div>
           )}
         </div>

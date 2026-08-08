@@ -34,16 +34,39 @@ const DonorList = ({ donors }) => {
     return matchSearch && matchBlood && matchDivision && matchAvailability;
   });
 
+  // Export Table to PDF
+  const handleExportPDF = () => {
+    const element = document.getElementById("donor-directory-table");
+    if (!element) return;
+
+    const opt = {
+      margin:       0.3,
+      filename:     `Active_Donor_Directory.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+    };
+
+    window.html2pdf().set(opt).from(element).save();
+  };
+
   return (
     <div className="card bg-slate-900 shadow-xl border border-slate-800">
       <div className="card-body">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <span>📋</span> Active Donor Directory
-          </h2>
-          <span className="badge bg-slate-800 text-slate-300 border-slate-700 p-3 text-xs font-semibold">
-            Total Donors Found: {filteredDonors.length}
-          </span>
+          <div>
+            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+              <span>📋</span> Active Donor Directory
+            </h2>
+            <span className="text-xs text-slate-400">Total Donors Found: {filteredDonors.length}</span>
+          </div>
+
+          <button 
+            onClick={handleExportPDF} 
+            className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-none gap-1 font-bold"
+          >
+            📄 Export Directory PDF
+          </button>
         </div>
 
         {/* Filter Bar */}
@@ -99,8 +122,8 @@ const DonorList = ({ donors }) => {
           </select>
         </div>
 
-        {/* Directory Table */}
-        <div className="overflow-x-auto rounded-lg border border-slate-800">
+        {/* Directory Table (PDF Element) */}
+        <div id="donor-directory-table" className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900 p-2">
           <table className="table w-full text-white">
             <thead className="bg-slate-950 text-slate-400 uppercase text-xs">
               <tr>
@@ -154,17 +177,7 @@ const DonorList = ({ donors }) => {
                         </span>
                       )}
                     </td>
-                    <td className="text-xs text-slate-300 font-mono flex items-center gap-2">
-                      <span>{donor.phone}</span>
-                      <a 
-                        href={`https://wa.me/88${donor.phone}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-emerald-400 hover:underline text-xs"
-                      >
-                        💬
-                      </a>
-                    </td>
+                    <td className="text-xs text-slate-300 font-mono">{donor.phone}</td>
                   </tr>
                 );
               })}
