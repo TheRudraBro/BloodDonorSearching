@@ -4,35 +4,38 @@ import DonorRegistry from './components/DonorRegistry';
 import DonorList from './components/DonorList';
 import DonorFind from './components/DonorFind';
 import DonorMap from './components/DonorMap';
-import PatientRequestFeed from './components/PatientRequestFeed'; // Import
+import PatientRequestFeed from './components/PatientRequestFeed';
 
 const divisions = [
   "Dhaka", "Chattogram", "Khulna", "Rajshahi", 
   "Sylhet", "Barishal", "Rangpur", "Mymensingh"
 ];
 
-const bloodCompatibility = {
-  "A+": ["A+", "A-", "O+", "O-"],
-  "A-": ["A-", "O-"],
-  "B+": ["B+", "B-", "O+", "O-"],
-  "B-": ["B-", "O-"],
-  "AB+": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
-  "AB-": ["A-", "B-", "AB-", "O-"],
-  "O+": ["O+", "O-"],
-  "O-": ["O-"]
-};
+// ১. কেবল যেসব ব্লাড গ্রুপ বিদ্যমান তাদের ড্রপডাউন লিস্টের জন্য
+const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
+// ২. Exact Match Score Logic (যে ব্লাড গ্রুপ সার্চ করা হবে কেবল সেটিই ফিল্টার হবে)
 const computeScore = (donor, requestedBloodData) => {
-  const allowedDonors = bloodCompatibility[requestedBloodData.bloodGroup] ?? [];
-  if (!allowedDonors.includes(donor.bloodGroup)) return 0;
-
-  if (donor.bloodGroup === requestedBloodData.bloodGroup && donor.division === requestedBloodData.division) {
-    return 100;
+  // ব্লাড গ্রুপ হুবহু এক না হলে পয়েন্ট ০ (ফলে ফিল্টার হয়ে বাদ পড়ে যাবে)
+  if (donor.bloodGroup !== requestedBloodData.bloodGroup) {
+    return 0;
   }
-  return 70;
-};
 
-const bloodGroups = Object.keys(bloodCompatibility);
+  let score = 50; // Exact Blood Match = 50 PTS
+
+  // ডিভিশন ও এলাকা মিললে এক্সট্রা স্কোর
+  if (requestedBloodData.division && donor.division === requestedBloodData.division) {
+    score += 20;
+  }
+  if (requestedBloodData.zila && donor.zila === requestedBloodData.zila) {
+    score += 15;
+  }
+  if (requestedBloodData.thana && donor.thana === requestedBloodData.thana) {
+    score += 15;
+  }
+
+  return score;
+};
 
 // Sample Initial Emergency Requests
 const initialRequests = [
@@ -67,7 +70,7 @@ const initialRequests = [
 function App() {
   const [donors, setDonors] = useState([]);
   const [requests, setRequests] = useState(initialRequests);
-  const [activeTab, setActiveTab] = useState("requests"); // Default to requests feed or register
+  const [activeTab, setActiveTab] = useState("search"); // Search tab focused
 
   const [requestedBloodData, setRequestedBloodData] = useState({
     name: "",
@@ -77,6 +80,7 @@ function App() {
     thana: ""
   });
 
+  // ৩. ফিল্টারিং লজিক (Exact Blood Group Only)
   const matchesDonors = () => {
     if (!requestedBloodData.bloodGroup) return [];
 
@@ -86,9 +90,13 @@ function App() {
         score: computeScore(donor, requestedBloodData)
       }))
       .filter(donor => {
+        // ব্লাড গ্রুপ ম্যাচ না হলে বাদ
         if (donor.score === 0) return false;
+
+        // জেলা ও থানা সিলেক্ট করা থাকলে সে অনুযায়ী ফিল্টার হবে
         const matchZila = !requestedBloodData.zila || donor.zila === requestedBloodData.zila;
         const matchThana = !requestedBloodData.thana || donor.thana === requestedBloodData.thana;
+        
         return matchZila && matchThana;
       })
       .sort((a, b) => b.score - a.score);
@@ -146,7 +154,7 @@ function App() {
                 : "bg-slate-800/90 text-slate-200 hover:bg-slate-700"
             }`}
           >
-            <span>🔍</span> AI Search
+            <span>🔍</span> Exact Search
           </button>
 
           <button
@@ -188,6 +196,8 @@ function App() {
               setRequestedBloodData={setRequestedBloodData}
               matchedDonors={matchedList}
             />
+            
+            {/* ম্যাপ ও পিডিএফ-এ কেবল সার্চ করা গ্রুপের ডোনাররাই যাবে */}
             <DonorMap donors={requestedBloodData.bloodGroup ? matchedList : []} />
           </div>
         )}
