@@ -1,6 +1,7 @@
 import React from 'react';
 import { bdLocations } from '../data/bdLocations';
 
+// রক্তদানের যোগ্যতা চেক করার ফাংশন
 const checkEligibility = (lastDateStr) => {
   if (!lastDateStr) return { eligible: true, daysLeft: 0 };
   const lastDate = new Date(lastDateStr);
@@ -22,30 +23,59 @@ const DonorFind = ({
   const [selectedDiv, setSelectedDiv] = React.useState("");
   const [selectedZila, setSelectedZila] = React.useState("");
 
-  // Fix: Reliable PDF Download Handler
+  // 📄 ১০০% ওয়ার্কিং ডাইরেক্ট PDF ফাইল ডাউনলোড লজিক (jsPDF AutoTable)
   const handleDownloadPDF = () => {
-    const element = document.getElementById("matched-donors-pdf-content");
-    if (!element) {
-      alert("PDF Content area not ready!");
-      return;
-    }
+    try {
+      const { jsPDF } = window.jspdf;
+      if (!jsPDF) {
+        alert("PDF library is loading. Please wait 2 seconds and try again.");
+        return;
+      }
 
-    element.style.display = "block"; // Temporarily show for capture
+      const doc = new jsPDF();
 
-    const opt = {
-      margin:       0.4,
-      filename:     `Matched_Blood_Donors_${requestedBloodData.bloodGroup || 'List'}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
+      // Title & Header
+      doc.setFontSize(18);
+      doc.setTextColor(220, 38, 38); // Red color
+      doc.text("Emergency Blood Donors Directory", 14, 20);
 
-    if (window.html2pdf) {
-      window.html2pdf().set(opt).from(element).save().then(() => {
-        element.style.display = "none"; // Hide after capture
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Blood Group: ${requestedBloodData.bloodGroup || 'All'} | Date: ${new Date().toLocaleDateString()}`, 14, 28);
+
+      // Table Data Formatting
+      const tableColumn = ["#", "Donor Name", "Blood Group", "Address", "Phone Number"];
+      const tableRows = [];
+
+      matchedDonors.forEach((donor, index) => {
+        const address = `${donor.area ? donor.area + ', ' : ''}${donor.thana || ''}, ${donor.zila || donor.division || ''}`;
+        const donorData = [
+          index + 1,
+          `${donor.name} ${donor.isVerified ? ' (Verified)' : ''}`,
+          donor.bloodGroup,
+          address,
+          donor.phone
+        ];
+        tableRows.push(donorData);
       });
-    } else {
-      alert("PDF library loading error. Please refresh the page.");
+
+      // AutoTable Plugin Execution
+      doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 35,
+        theme: 'striped',
+        headStyles: { fillColor: [220, 38, 38] },
+        styles: { fontSize: 9, cellPadding: 3 }
+      });
+
+      // Save PDF Directly
+      const fileName = `Blood_Donors_${requestedBloodData.bloodGroup || 'Report'}_${Date.now()}.pdf`;
+      doc.save(fileName);
+
+    } catch (error) {
+      console.error("PDF Download Error:", error);
+      alert("Error generating PDF. Please check internet connection for CDN libraries.");
     }
   };
 
@@ -70,7 +100,7 @@ const DonorFind = ({
       <div className="card bg-slate-900 shadow-xl border border-red-500/30">
         <div className="card-body">
           <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-            <span>🩸</span> Find Compatible Donor (AI Match)
+            <span>🩸</span> Find Compatible Donor (Exact Match)
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
@@ -140,9 +170,9 @@ const DonorFind = ({
                   <button 
                     type="button"
                     onClick={handleDownloadPDF} 
-                    className="btn btn-sm bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 gap-1 font-bold z-10"
+                    className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-none gap-1 font-bold shadow-lg"
                   >
-                    📄 Download PDF Report
+                    📥 Download PDF Report
                   </button>
                 )}
               </div>
@@ -187,7 +217,6 @@ const DonorFind = ({
                         <span className="text-xs font-bold text-amber-400">{donor.score} PTS</span>
                         
                         <div className="flex gap-2">
-                          {/* Working WhatsApp Link */}
                           <a 
                             href={`https://api.whatsapp.com/send?phone=88${cleanPhone}&text=${encodeURIComponent(`Emergency! Need ${donor.bloodGroup} blood at ${requestedBloodData.zila || 'your location'}. Are you available?`)}`} 
                             target="_blank" 
@@ -197,7 +226,6 @@ const DonorFind = ({
                             💬 WA
                           </a>
 
-                          {/* Working Direct Call Link */}
                           <a 
                             href={`tel:${cleanPhone}`} 
                             className="btn btn-xs bg-red-600 hover:bg-red-700 text-white border-none font-bold px-3"
@@ -209,33 +237,6 @@ const DonorFind = ({
                     </div>
                   );
                 })}
-              </div>
-
-              {/* Hidden Template For PDF Export Only */}
-              <div id="matched-donors-pdf-content" style={{ display: "none" }} className="p-4 bg-white text-slate-900">
-                <h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "10px", color: "#dc2626" }}>
-                  Matched Blood Donors Report ({requestedBloodData.bloodGroup})
-                </h2>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
-                  <thead>
-                    <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-                      <th style={{ padding: "8px", border: "1px solid #ddd" }}>Name</th>
-                      <th style={{ padding: "8px", border: "1px solid #ddd" }}>Blood</th>
-                      <th style={{ padding: "8px", border: "1px solid #ddd" }}>Address</th>
-                      <th style={{ padding: "8px", border: "1px solid #ddd" }}>Phone</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matchedDonors.map(d => (
-                      <tr key={d.id}>
-                        <td style={{ padding: "8px", border: "1px solid #ddd" }}>{d.name}</td>
-                        <td style={{ padding: "8px", border: "1px solid #ddd" }}>{d.bloodGroup}</td>
-                        <td style={{ padding: "8px", border: "1px solid #ddd" }}>{d.area ? `${d.area}, ` : ''}{d.thana}, {d.zila}</td>
-                        <td style={{ padding: "8px", border: "1px solid #ddd" }}>{d.phone}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
 
             </div>
