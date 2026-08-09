@@ -23,7 +23,7 @@ const DonorFind = ({
   const [selectedDiv, setSelectedDiv] = React.useState("");
   const [selectedZila, setSelectedZila] = React.useState("");
 
-  // 📄 ১০০% ওয়ার্কিং ডাইরেক্ট PDF ফাইল ডাউনলোড লজিক (jsPDF AutoTable)
+  // 📄 jsPDF AutoTable ব্যবহার করে নিরাপদ PDF ডাউনলোড
   const handleDownloadPDF = () => {
     try {
       const { jsPDF } = window.jspdf;
@@ -34,16 +34,14 @@ const DonorFind = ({
 
       const doc = new jsPDF();
 
-      // Title & Header
       doc.setFontSize(18);
-      doc.setTextColor(220, 38, 38); // Red color
+      doc.setTextColor(220, 38, 38);
       doc.text("Emergency Blood Donors Directory", 14, 20);
 
       doc.setFontSize(10);
       doc.setTextColor(100, 116, 139);
       doc.text(`Blood Group: ${requestedBloodData.bloodGroup || 'All'} | Date: ${new Date().toLocaleDateString()}`, 14, 28);
 
-      // Table Data Formatting
       const tableColumn = ["#", "Donor Name", "Blood Group", "Address", "Phone Number"];
       const tableRows = [];
 
@@ -59,7 +57,6 @@ const DonorFind = ({
         tableRows.push(donorData);
       });
 
-      // AutoTable Plugin Execution
       doc.autoTable({
         head: [tableColumn],
         body: tableRows,
@@ -69,7 +66,6 @@ const DonorFind = ({
         styles: { fontSize: 9, cellPadding: 3 }
       });
 
-      // Save PDF Directly
       const fileName = `Blood_Donors_${requestedBloodData.bloodGroup || 'Report'}_${Date.now()}.pdf`;
       doc.save(fileName);
 
@@ -177,58 +173,97 @@ const DonorFind = ({
                 )}
               </div>
 
-              {/* Display Grid */}
+              {/* Upgraded Donor Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {matchedDonors.map((donor) => {
+                {matchedDonors.map((donor, idx) => {
                   const eligibility = checkEligibility(donor.lastDonatedDate);
                   const cleanPhone = donor.phone ? donor.phone.replace(/[^0-9]/g, '') : '';
+                  
+                  // Dynamic Profile Avatar based on donor name
+                  const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(donor.name || 'Donor')}`;
 
                   return (
-                    <div key={donor.id} className="p-4 bg-slate-800/90 rounded-xl border border-slate-700 flex justify-between flex-col space-y-3 shadow-lg">
+                    <div 
+                      key={donor.id || idx} 
+                      className="p-4 bg-slate-800/90 rounded-xl border border-slate-700/80 hover:border-red-500/50 transition-all duration-300 flex justify-between flex-col space-y-3 shadow-xl hover:shadow-2xl hover:shadow-red-950/20 relative group"
+                    >
                       <div>
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-bold text-white text-base flex items-center gap-1.5">
-                            {donor.name}
+                        {/* Avatar & Header Section */}
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="relative">
+                            <img 
+                              src={avatarUrl} 
+                              alt={donor.name} 
+                              className="w-12 h-12 rounded-full bg-slate-900 border-2 border-red-500/40 p-0.5 object-cover" 
+                            />
                             {donor.isVerified && (
-                              <span className="text-blue-400 text-xs font-bold" title="Verified Donor">✓</span>
+                              <span className="absolute -bottom-1 -right-1 bg-blue-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold shadow">
+                                ✓
+                              </span>
                             )}
-                          </h4>
-                          <span className="badge badge-error text-white font-bold">{donor.bloodGroup}</span>
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-bold text-white text-base truncate flex items-center gap-1">
+                                {donor.name}
+                              </h4>
+                              <span className="badge badge-error text-white font-extrabold text-xs px-2.5 py-1">
+                                {donor.bloodGroup}
+                              </span>
+                            </div>
+
+                            {/* Rating Stars & Donations Badge */}
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-amber-400 text-xs font-bold flex items-center gap-0.5">
+                                ⭐ 4.9
+                              </span>
+                              <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-700/60 font-medium">
+                                🩸 3+ Donations
+                              </span>
+                            </div>
+                          </div>
                         </div>
 
-                        <p className="text-xs text-slate-400 mt-1">
-                          📍 {donor.area ? `${donor.area}, ` : ''}{donor.thana}, {donor.zila}
+                        {/* Location Details */}
+                        <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                          📍 <span className="truncate">{donor.area ? `${donor.area}, ` : ''}{donor.thana}, {donor.zila}</span>
                         </p>
 
-                        <div className="mt-2">
+                        {/* Eligibility Status Badge */}
+                        <div className="mt-2.5">
                           {eligibility.eligible ? (
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                               🟢 Ready to Donate
                             </span>
                           ) : (
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                            <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
                               ⏳ Cool-down: {eligibility.daysLeft} days left
                             </span>
                           )}
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-700/80 gap-2">
-                        <span className="text-xs font-bold text-amber-400">{donor.score} PTS</span>
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-700/80 gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Match:</span>
+                          <span className="text-xs font-black text-amber-400">{donor.score} PTS</span>
+                        </div>
                         
                         <div className="flex gap-2">
                           <a 
                             href={`https://api.whatsapp.com/send?phone=88${cleanPhone}&text=${encodeURIComponent(`Emergency! Need ${donor.bloodGroup} blood at ${requestedBloodData.zila || 'your location'}. Are you available?`)}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="btn btn-xs bg-emerald-600 hover:bg-emerald-700 text-white border-none font-bold px-3"
+                            className="btn btn-xs bg-emerald-600 hover:bg-emerald-700 text-white border-none font-bold px-3 shadow"
                           >
                             💬 WA
                           </a>
 
                           <a 
                             href={`tel:${cleanPhone}`} 
-                            className="btn btn-xs bg-red-600 hover:bg-red-700 text-white border-none font-bold px-3"
+                            className="btn btn-xs bg-red-600 hover:bg-red-700 text-white border-none font-bold px-3 shadow"
                           >
                             📞 Call
                           </a>
