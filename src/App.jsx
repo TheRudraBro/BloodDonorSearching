@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import Header from './components/Header';
+import HeroSection from './components/HeroSection';
+import BloodCompatibilityModal from './components/BloodCompatibilityModal'; // New Modal
 import DonorRegistry from './components/DonorRegistry';
 import DonorList from './components/DonorList';
 import DonorFind from './components/DonorFind';
@@ -11,19 +13,15 @@ const divisions = [
   "Sylhet", "Barishal", "Rangpur", "Mymensingh"
 ];
 
-// ১. কেবল যেসব ব্লাড গ্রুপ বিদ্যমান তাদের ড্রপডাউন লিস্টের জন্য
 const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
-// ২. Exact Match Score Logic (যে ব্লাড গ্রুপ সার্চ করা হবে কেবল সেটিই ফিল্টার হবে)
 const computeScore = (donor, requestedBloodData) => {
-  // ব্লাড গ্রুপ হুবহু এক না হলে পয়েন্ট ০ (ফলে ফিল্টার হয়ে বাদ পড়ে যাবে)
   if (donor.bloodGroup !== requestedBloodData.bloodGroup) {
     return 0;
   }
 
-  let score = 50; // Exact Blood Match = 50 PTS
+  let score = 50;
 
-  // ডিভিশন ও এলাকা মিললে এক্সট্রা স্কোর
   if (requestedBloodData.division && donor.division === requestedBloodData.division) {
     score += 20;
   }
@@ -37,7 +35,6 @@ const computeScore = (donor, requestedBloodData) => {
   return score;
 };
 
-// Sample Initial Emergency Requests
 const initialRequests = [
   {
     id: "REQ-1001",
@@ -70,7 +67,10 @@ const initialRequests = [
 function App() {
   const [donors, setDonors] = useState([]);
   const [requests, setRequests] = useState(initialRequests);
-  const [activeTab, setActiveTab] = useState("search"); // Search tab focused
+  const [activeTab, setActiveTab] = useState("search");
+  
+  // Compatibility Modal State
+  const [isChartOpen, setIsChartOpen] = useState(false);
 
   const [requestedBloodData, setRequestedBloodData] = useState({
     name: "",
@@ -80,7 +80,11 @@ function App() {
     thana: ""
   });
 
-  // ৩. ফিল্টারিং লজিক (Exact Blood Group Only)
+  const handleQuickBloodGroupSelect = (group) => {
+    setRequestedBloodData({ ...requestedBloodData, bloodGroup: group });
+    setActiveTab("search");
+  };
+
   const matchesDonors = () => {
     if (!requestedBloodData.bloodGroup) return [];
 
@@ -90,13 +94,9 @@ function App() {
         score: computeScore(donor, requestedBloodData)
       }))
       .filter(donor => {
-        // ব্লাড গ্রুপ ম্যাচ না হলে বাদ
         if (donor.score === 0) return false;
-
-        // জেলা ও থানা সিলেক্ট করা থাকলে সে অনুযায়ী ফিল্টার হবে
         const matchZila = !requestedBloodData.zila || donor.zila === requestedBloodData.zila;
         const matchThana = !requestedBloodData.thana || donor.thana === requestedBloodData.thana;
-        
         return matchZila && matchThana;
       })
       .sort((a, b) => b.score - a.score);
@@ -121,6 +121,22 @@ function App() {
     <div className='bg-slate-800 min-h-screen pb-12'>
       <div className='container mx-auto py-4 space-y-6 px-4 sm:px-0'>
         <Header />
+
+        {/* Hero Section & Quick Chips */}
+        <HeroSection 
+          donorsCount={donors.length}
+          requestsCount={requests.length}
+          bloodGroups={bloodGroups}
+          selectedBloodGroup={requestedBloodData.bloodGroup}
+          onSelectBloodGroup={handleQuickBloodGroupSelect}
+          onOpenChart={() => setIsChartOpen(true)}
+        />
+
+        {/* Compatibility Modal */}
+        <BloodCompatibilityModal 
+          isOpen={isChartOpen} 
+          onClose={() => setIsChartOpen(false)} 
+        />
 
         {/* 4 Navigation Tabs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900 p-2 rounded-xl border border-slate-700/80 shadow-2xl">
@@ -196,8 +212,6 @@ function App() {
               setRequestedBloodData={setRequestedBloodData}
               matchedDonors={matchedList}
             />
-            
-            {/* ম্যাপ ও পিডিএফ-এ কেবল সার্চ করা গ্রুপের ডোনাররাই যাবে */}
             <DonorMap donors={requestedBloodData.bloodGroup ? matchedList : []} />
           </div>
         )}
