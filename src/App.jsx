@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { auth, db } from './firebase/config';
+
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
-import BloodCompatibilityModal from './components/BloodCompatibilityModal'; // New Modal
+import BloodCompatibilityModal from './components/BloodCompatibilityModal';
+import UserProfileModal from './components/UserProfileModal';
+import AuthModal from './components/AuthModal';
 import DonorRegistry from './components/DonorRegistry';
 import DonorList from './components/DonorList';
 import DonorFind from './components/DonorFind';
@@ -68,9 +74,10 @@ function App() {
   const [donors, setDonors] = useState([]);
   const [requests, setRequests] = useState(initialRequests);
   const [activeTab, setActiveTab] = useState("search");
-  
-  // Compatibility Modal State
   const [isChartOpen, setIsChartOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [user, setUser] = useState(null);
 
   const [requestedBloodData, setRequestedBloodData] = useState({
     name: "",
@@ -79,6 +86,59 @@ function App() {
     zila: "",
     thana: ""
   });
+
+  const loadLocalDonors = async () => {
+    try {
+      const res = await fetch("/data.json");
+      const data = await res.json();
+      setDonors(data);
+    } catch (err) {
+      console.error("Local data load error:", err);
+    }
+  };
+
+  useEffect(() => {
+    try {
+      if (auth) {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+          setUser(currentUser);
+        });
+        return () => unsubscribe();
+      }
+    } catch (err) {
+      console.error("Auth listener error:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+    try {
+      if (db) {
+        const q = query(collection(db, "donors"));
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const liveDonors = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          if (liveDonors.length > 0) {
+            setDonors(liveDonors);
+          } else {
+            loadLocalDonors();
+          }
+        }, (error) => {
+          console.warn("Firestore fallback to local JSON:", error);
+          loadLocalDonors();
+        });
+      } else {
+        loadLocalDonors();
+      }
+    } catch (err) {
+      console.error("Firestore init error:", err);
+      loadLocalDonors();
+    }
+
+    return () => unsubscribe();
+  }, []);
 
   const handleQuickBloodGroupSelect = (group) => {
     setRequestedBloodData({ ...requestedBloodData, bloodGroup: group });
@@ -104,25 +164,78 @@ function App() {
 
   const matchedList = matchesDonors();
 
-  useEffect(() => {
-    async function loadDonors() {
-      try {
-        const res = await fetch("/data.json");
-        const data = await res.json();
-        setDonors(data);
-      } catch (error) {
-        console.error("Error loading donors:", error);
-      }
+  const handleLogout = async () => {
+    if (auth) {
+      await signOut(auth);
+      alert("Logged out successfully!");
     }
-    loadDonors();
-  }, []);
+  };
+
+  const userAvatar = user?.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.displayName || user?.email || 'User')}`;
 
   return (
-    <div className='bg-slate-800 min-h-screen pb-12'>
-      <div className='container mx-auto py-4 space-y-6 px-4 sm:px-0'>
-        <Header />
+    <div className="bg-slate-900 min-h-screen text-white pb-12">
+      <div className="container mx-auto py-4 space-y-4 px-3 sm:px-0">
+        
+        {/* ১. সম্পূর্ণ হেডার সেকশন */}
+        <div className="w-full bg-slate-950/90 p-3.5 sm:p-5 rounded-2xl border border-slate-800/80 backdrop-blur-xl shadow-2xl">
+          <Header />
+        </div>
 
-        {/* Hero Section & Quick Chips */}
+        {/* ২. মোবাইল রেসপন্সিভ প্রোফাইল প্যানেল */}
+        <div className="w-full bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-3 sm:p-4 rounded-2xl border border-red-500/30 flex items-center justify-between gap-2 shadow-xl backdrop-blur-md">
+          
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            {user ? (
+              <div className="relative shrink-0">
+                <img 
+                  src={userAvatar} 
+                  alt="User Avatar" 
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-900 object-cover border-2 border-red-500 shadow-md"
+                />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-900 animate-pulse"></span>
+              </div>
+            ) : (
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-base sm:text-lg shrink-0">
+                👤
+              </div>
+            )}
+
+            <div className="min-w-0 flex-1">
+              <h4 className="text-xs sm:text-sm font-black text-white flex items-center gap-1 truncate">
+                <span className="truncate">{user ? (user.displayName || 'Emergency Donor') : 'Guest User'}</span>
+                {user && (
+                  <span className="text-blue-400 text-[9px] sm:text-[10px] bg-blue-500/20 px-1.5 py-0.2 rounded-full font-bold border border-blue-500/30 shrink-0">
+                    ✓
+                  </span>
+                )}
+              </h4>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                {user ? user.email : 'Log in to manage profile'}
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0 ml-1">
+            {user ? (
+              <button 
+                onClick={() => setIsProfileOpen(true)}
+                className="btn btn-xs sm:btn-sm bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-bold text-[11px] sm:text-xs gap-1 rounded-xl px-2.5 sm:px-4 shadow-lg"
+              >
+                <span>⚙️</span> <span className="hidden xs:inline">Profile</span>
+              </button>
+            ) : (
+              <button 
+                onClick={() => setIsAuthOpen(true)} 
+                className="btn btn-xs sm:btn-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white border-none font-extrabold shadow-lg shadow-red-950/50 px-2.5 sm:px-4 text-[10px] sm:text-xs rounded-xl"
+              >
+                🔐 Login
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ৩. হিরো সেকশন */}
         <HeroSection 
           donorsCount={donors.length}
           requestsCount={requests.length}
@@ -132,20 +245,33 @@ function App() {
           onOpenChart={() => setIsChartOpen(true)}
         />
 
-        {/* Compatibility Modal */}
+        {/* Modals */}
         <BloodCompatibilityModal 
           isOpen={isChartOpen} 
           onClose={() => setIsChartOpen(false)} 
         />
 
+        <AuthModal 
+          isOpen={isAuthOpen} 
+          onClose={() => setIsAuthOpen(false)} 
+          setUser={setUser} 
+        />
+
+        <UserProfileModal 
+          isOpen={isProfileOpen} 
+          onClose={() => setIsProfileOpen(false)} 
+          user={user} 
+          onLogout={handleLogout} 
+        />
+
         {/* 4 Navigation Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900 p-2 rounded-xl border border-slate-700/80 shadow-2xl">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2 rounded-xl border bg-slate-950 border-slate-800 shadow-2xl">
           <button
             onClick={() => setActiveTab("requests")}
             className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
               activeTab === "requests"
                 ? "bg-red-600 text-white shadow-lg shadow-red-600/40 ring-1 ring-red-400"
-                : "bg-slate-800/90 text-slate-200 hover:bg-slate-700"
+                : "bg-slate-900 text-slate-300 hover:bg-slate-800"
             }`}
           >
             <span>🚨</span> Patient Requests
@@ -156,7 +282,7 @@ function App() {
             className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
               activeTab === "register"
                 ? "bg-red-600 text-white shadow-lg shadow-red-600/40 ring-1 ring-red-400"
-                : "bg-slate-800/90 text-slate-200 hover:bg-slate-700"
+                : "bg-slate-900 text-slate-300 hover:bg-slate-800"
             }`}
           >
             <span>📝</span> Registration
@@ -167,7 +293,7 @@ function App() {
             className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
               activeTab === "search"
                 ? "bg-red-600 text-white shadow-lg shadow-red-600/40 ring-1 ring-red-400"
-                : "bg-slate-800/90 text-slate-200 hover:bg-slate-700"
+                : "bg-slate-900 text-slate-300 hover:bg-slate-800"
             }`}
           >
             <span>🔍</span> Exact Search
@@ -178,7 +304,7 @@ function App() {
             className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
               activeTab === "directory"
                 ? "bg-red-600 text-white shadow-lg shadow-red-600/40 ring-1 ring-red-400"
-                : "bg-slate-800/90 text-slate-200 hover:bg-slate-700"
+                : "bg-slate-900 text-slate-300 hover:bg-slate-800"
             }`}
           >
             <span>📋</span> Directory

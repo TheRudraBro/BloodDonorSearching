@@ -1,6 +1,4 @@
-
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -14,18 +12,13 @@ const firebaseConfig = {
   measurementId: "G-G7VQBNBL7N"
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
-
 
 
 
 // ১. Firebase App ইনিশিয়ালাইজেশন
 const app = initializeApp(firebaseConfig);
 
-// ২. Authentication ও Firestore Database সার্ভিস এক্সপোর্ট
+// ২. কেবল একবারই এক্সপোর্ট করা হচ্ছে (Duplicate Banned)
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);

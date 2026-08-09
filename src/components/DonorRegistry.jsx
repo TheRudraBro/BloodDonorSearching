@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import { bdLocations } from '../data/bdLocations';
 
 const redIcon = new L.Icon({
@@ -67,28 +69,39 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
     }
   };
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     setLoading(true);
 
-    const newDonor = {
-      ...data,
-      id: `DN-${1000 + donors.length + 1}`,
-      lat: markerPos[0],
-      lng: markerPos[1],
-      available: true,
-      isVerified: true
-    };
+    try {
+      const newDonorData = {
+        ...data,
+        lat: markerPos[0],
+        lng: markerPos[1],
+        available: true,
+        isVerified: true,
+        createdAt: serverTimestamp()
+      };
 
-    setDonors([newDonor, ...donors]);
-    reset();
-    setSelectedDiv("");
-    setSelectedZila("");
+      // Firebase-এ পারমানেন্ট সেভ
+      if (db) {
+        await addDoc(collection(db, "donors"), newDonorData);
+      }
+
+      setDonors([{ ...newDonorData, id: Date.now().toString() }, ...donors]);
+      reset();
+      setSelectedDiv("");
+      setSelectedZila("");
+      alert("✅ Registered successfully to Database!");
+    } catch (error) {
+      console.error("Firestore Save Error:", error);
+      alert("Failed to save donor data.");
+    }
+
     setLoading(false);
-    alert("✅ Registration complete with verified profile!");
   };
 
   return (
-    <div className="card bg-slate-900 shadow-xl border border-slate-800">
+    <div className="card bg-slate-900 shadow-xl border border-slate-800 text-white">
       <div className="card-body">
         <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
           <span>📝</span> Register as a Blood Donor
@@ -102,7 +115,7 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
               type="text" 
               {...register("name", { required: true })} 
               placeholder="e.g. Rahim Ahmed" 
-              className="input input-bordered w-full bg-slate-800 text-white border-slate-700 focus:border-red-500 placeholder:text-slate-500" 
+              className="input input-bordered w-full bg-slate-800 text-white border-slate-700 focus:border-red-500" 
             />
           </div>
 
@@ -183,9 +196,9 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
               type="text" 
               {...register("area")} 
               placeholder="e.g. Rupnagar, Road 16, House 30" 
-              className="input input-bordered w-full bg-slate-800 text-white border-slate-700 focus:border-red-500 placeholder:text-slate-500" 
+              className="input input-bordered w-full bg-slate-800 text-white border-slate-700 focus:border-red-500" 
               onBlur={(e) => {
-                const currentThana = document.querySelector('select[name="thana"]').value;
+                const currentThana = document.querySelector('select[name="thana"]')?.value;
                 handleSmartGeocode(currentThana, selectedZila, e.target.value);
               }}
             />
@@ -206,7 +219,7 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
               type="text" 
               {...register("phone", { required: true })} 
               placeholder="e.g. 01712345678" 
-              className="input input-bordered w-full bg-slate-800 text-white border-slate-700 focus:border-red-500 placeholder:text-slate-500" 
+              className="input input-bordered w-full bg-slate-800 text-white border-slate-700 focus:border-red-500" 
             />
           </div>
 
@@ -240,4 +253,5 @@ const DonorRegistry = ({ bloodGroups, donors, setDonors }) => {
   );
 };
 
+// 🔴 এই লাইনটি না থাকার কারণেই White Screen পাচ্ছিলেন!
 export default DonorRegistry;
