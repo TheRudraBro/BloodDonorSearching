@@ -15,9 +15,10 @@ import DonorMap from './components/DonorMap';
 import PatientRequestFeed from './components/PatientRequestFeed';
 import Footer from './components/Footer';
 
+// Ultra-Modern Features
 import LiveEmergencyTicker from './components/LiveEmergencyTicker';
-import EmergencyShareModal from './components/EmergencyShareModal';
-import ReportFakeModal from './components/ReportFakeModal';
+import EmergencyPosterModal from './components/EmergencyPosterModal';
+import DonorRewardsModal from './components/DonorRewardsModal';
 
 const divisions = [
   "Dhaka", "Chattogram", "Khulna", "Rajshahi", 
@@ -82,10 +83,9 @@ function App() {
   const [isChartOpen, setIsChartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isRewardsOpen, setIsRewardsOpen] = useState(false);
+  const [selectedPosterReq, setSelectedPosterReq] = useState(null);
   const [user, setUser] = useState(null);
-
-  const [selectedShareReq, setSelectedShareReq] = useState(null);
-  const [selectedReportReq, setSelectedReportReq] = useState(null);
 
   const [requestedBloodData, setRequestedBloodData] = useState({
     name: "",
@@ -186,7 +186,7 @@ function App() {
     <div className="bg-slate-900 min-h-screen text-white flex flex-col justify-between">
       <div className="container mx-auto py-4 space-y-4 px-3 sm:px-0">
         
-        {/* Main Header Section */}
+        {/* Main Header */}
         <div className="w-full bg-slate-950/90 p-3.5 sm:p-5 rounded-2xl border border-slate-800/80 backdrop-blur-xl shadow-2xl">
           <Header />
         </div>
@@ -194,7 +194,7 @@ function App() {
         {/* Live Emergency Ticker */}
         <LiveEmergencyTicker requests={requests} />
 
-        {/* Ultra-Premium Profile Top Bar */}
+        {/* Ultra-Premium Profile Top Bar with Reward Center */}
         <div className="w-full bg-slate-950/80 p-3 sm:p-4 rounded-2xl border border-slate-800 hover:border-red-500/30 flex items-center justify-between gap-3 shadow-2xl backdrop-blur-xl transition-all duration-300">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {user ? (
@@ -230,23 +230,31 @@ function App() {
                 )}
               </h4>
               <p className="text-[10px] sm:text-[11px] text-slate-400 truncate tracking-tight font-medium">
-                {user ? user.email : 'Log in to manage profile & status'}
+                {user ? user.email : 'Log in to access donor rewards & certificates'}
               </p>
             </div>
           </div>
 
-          <div className="shrink-0">
+          <div className="shrink-0 flex items-center gap-2">
             {user ? (
-              <button 
-                onClick={() => setIsProfileOpen(true)}
-                className="btn btn-xs sm:btn-sm bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 hover:border-slate-600 font-semibold text-[11px] sm:text-xs gap-1.5 rounded-xl px-3 sm:px-4 shadow-md active:scale-95 transition-all duration-200"
-              >
-                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span className="hidden xs:inline">Profile</span>
-              </button>
+              <>
+                <button 
+                  onClick={() => setIsRewardsOpen(true)}
+                  className="btn btn-xs sm:btn-sm bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-[11px] sm:text-xs rounded-xl px-2.5 sm:px-3 shadow-md active:scale-95 transition-transform"
+                >
+                  🏆 Rewards
+                </button>
+                <button 
+                  onClick={() => setIsProfileOpen(true)}
+                  className="btn btn-xs sm:btn-sm bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 font-semibold text-[11px] sm:text-xs gap-1.5 rounded-xl px-3 sm:px-4 active:scale-95 transition-transform"
+                >
+                  <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>Profile</span>
+                </button>
+              </>
             ) : (
               <button 
                 onClick={() => setIsAuthOpen(true)} 
@@ -290,16 +298,16 @@ function App() {
           onLogout={handleLogout} 
         />
 
-        <EmergencyShareModal 
-          isOpen={!!selectedShareReq} 
-          onClose={() => setSelectedShareReq(null)} 
-          request={selectedShareReq} 
+        <DonorRewardsModal 
+          isOpen={isRewardsOpen} 
+          onClose={() => setIsRewardsOpen(false)} 
+          user={user} 
         />
 
-        <ReportFakeModal 
-          isOpen={!!selectedReportReq} 
-          onClose={() => setSelectedReportReq(null)} 
-          request={selectedReportReq} 
+        <EmergencyPosterModal 
+          isOpen={!!selectedPosterReq} 
+          onClose={() => setSelectedPosterReq(null)} 
+          request={selectedPosterReq} 
         />
 
         {/* 4 Navigation Tabs */}
@@ -367,8 +375,7 @@ function App() {
             bloodGroups={bloodGroups} 
             requests={requests} 
             setRequests={setRequests} 
-            onShare={(req) => setSelectedShareReq(req)}
-            onReport={(req) => setSelectedReportReq(req)}
+            onShare={(req) => setSelectedPosterReq(req)}
           />
         )}
 
