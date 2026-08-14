@@ -13,6 +13,11 @@ import DonorList from './components/DonorList';
 import DonorFind from './components/DonorFind';
 import DonorMap from './components/DonorMap';
 import PatientRequestFeed from './components/PatientRequestFeed';
+import Footer from './components/Footer';
+
+import LiveEmergencyTicker from './components/LiveEmergencyTicker';
+import EmergencyShareModal from './components/EmergencyShareModal';
+import ReportFakeModal from './components/ReportFakeModal';
 
 const divisions = [
   "Dhaka", "Chattogram", "Khulna", "Rajshahi", 
@@ -78,6 +83,9 @@ function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [user, setUser] = useState(null);
+
+  const [selectedShareReq, setSelectedShareReq] = useState(null);
+  const [selectedReportReq, setSelectedReportReq] = useState(null);
 
   const [requestedBloodData, setRequestedBloodData] = useState({
     name: "",
@@ -171,71 +179,89 @@ function App() {
     }
   };
 
-  const userAvatar = user?.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.displayName || user?.email || 'User')}`;
+  const defaultFallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || 'User')}&background=dc2626&color=ffffff&bold=true`;
+  const userAvatar = user?.photoURL || defaultFallbackAvatar;
 
   return (
-    <div className="bg-slate-900 min-h-screen text-white pb-12">
+    <div className="bg-slate-900 min-h-screen text-white flex flex-col justify-between">
       <div className="container mx-auto py-4 space-y-4 px-3 sm:px-0">
         
-        {/* ১. সম্পূর্ণ হেডার সেকশন */}
+        {/* Main Header Section */}
         <div className="w-full bg-slate-950/90 p-3.5 sm:p-5 rounded-2xl border border-slate-800/80 backdrop-blur-xl shadow-2xl">
           <Header />
         </div>
 
-        {/* ২. মোবাইল রেসপন্সিভ প্রোফাইল প্যানেল */}
-        <div className="w-full bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-3 sm:p-4 rounded-2xl border border-red-500/30 flex items-center justify-between gap-2 shadow-xl backdrop-blur-md">
-          
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        {/* Live Emergency Ticker */}
+        <LiveEmergencyTicker requests={requests} />
+
+        {/* Ultra-Premium Profile Top Bar */}
+        <div className="w-full bg-slate-950/80 p-3 sm:p-4 rounded-2xl border border-slate-800 hover:border-red-500/30 flex items-center justify-between gap-3 shadow-2xl backdrop-blur-xl transition-all duration-300">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {user ? (
               <div className="relative shrink-0">
                 <img 
                   src={userAvatar} 
-                  alt="User Avatar" 
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-900 object-cover border-2 border-red-500 shadow-md"
+                  alt="" 
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = defaultFallbackAvatar;
+                  }}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900 object-cover ring-2 ring-red-500/80 p-0.5 shadow-lg shadow-red-950/40"
                 />
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-900 animate-pulse"></span>
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-slate-950 animate-pulse"></span>
               </div>
             ) : (
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-base sm:text-lg shrink-0">
-                👤
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0 shadow-inner">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
               </div>
             )}
 
             <div className="min-w-0 flex-1">
-              <h4 className="text-xs sm:text-sm font-black text-white flex items-center gap-1 truncate">
-                <span className="truncate">{user ? (user.displayName || 'Emergency Donor') : 'Guest User'}</span>
+              <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 truncate">
+                <span className="truncate tracking-wide">{user ? (user.displayName || 'Emergency Donor') : 'Guest User'}</span>
                 {user && (
-                  <span className="text-blue-400 text-[9px] sm:text-[10px] bg-blue-500/20 px-1.5 py-0.2 rounded-full font-bold border border-blue-500/30 shrink-0">
-                    ✓
+                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 shrink-0">
+                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                    </svg>
                   </span>
                 )}
               </h4>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                {user ? user.email : 'Log in to manage profile'}
+              <p className="text-[10px] sm:text-[11px] text-slate-400 truncate tracking-tight font-medium">
+                {user ? user.email : 'Log in to manage profile & status'}
               </p>
             </div>
           </div>
 
-          <div className="shrink-0 ml-1">
+          <div className="shrink-0">
             {user ? (
               <button 
                 onClick={() => setIsProfileOpen(true)}
-                className="btn btn-xs sm:btn-sm bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-bold text-[11px] sm:text-xs gap-1 rounded-xl px-2.5 sm:px-4 shadow-lg"
+                className="btn btn-xs sm:btn-sm bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 hover:border-slate-600 font-semibold text-[11px] sm:text-xs gap-1.5 rounded-xl px-3 sm:px-4 shadow-md active:scale-95 transition-all duration-200"
               >
-                <span>⚙️</span> <span className="hidden xs:inline">Profile</span>
+                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="hidden xs:inline">Profile</span>
               </button>
             ) : (
               <button 
                 onClick={() => setIsAuthOpen(true)} 
-                className="btn btn-xs sm:btn-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white border-none font-extrabold shadow-lg shadow-red-950/50 px-2.5 sm:px-4 text-[10px] sm:text-xs rounded-xl"
+                className="btn btn-xs sm:btn-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white border-none font-bold shadow-lg shadow-red-950/50 px-3.5 sm:px-4 text-[11px] sm:text-xs rounded-xl active:scale-95 transition-all duration-200 gap-1.5"
               >
-                🔐 Login
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span>Login</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* ৩. হিরো সেকশন */}
+        {/* Hero Section */}
         <HeroSection 
           donorsCount={donors.length}
           requestsCount={requests.length}
@@ -264,50 +290,74 @@ function App() {
           onLogout={handleLogout} 
         />
 
+        <EmergencyShareModal 
+          isOpen={!!selectedShareReq} 
+          onClose={() => setSelectedShareReq(null)} 
+          request={selectedShareReq} 
+        />
+
+        <ReportFakeModal 
+          isOpen={!!selectedReportReq} 
+          onClose={() => setSelectedReportReq(null)} 
+          request={selectedReportReq} 
+        />
+
         {/* 4 Navigation Tabs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2 rounded-xl border bg-slate-950 border-slate-800 shadow-2xl">
           <button
             onClick={() => setActiveTab("requests")}
-            className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
               activeTab === "requests"
                 ? "bg-red-600 text-white shadow-lg shadow-red-600/40 ring-1 ring-red-400"
                 : "bg-slate-900 text-slate-300 hover:bg-slate-800"
             }`}
           >
-            <span>🚨</span> Patient Requests
+            <svg className="w-4 h-4 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Patient Requests
           </button>
 
           <button
             onClick={() => setActiveTab("register")}
-            className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
               activeTab === "register"
                 ? "bg-red-600 text-white shadow-lg shadow-red-600/40 ring-1 ring-red-400"
                 : "bg-slate-900 text-slate-300 hover:bg-slate-800"
             }`}
           >
-            <span>📝</span> Registration
+            <svg className="w-4 h-4 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Registration
           </button>
 
           <button
             onClick={() => setActiveTab("search")}
-            className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
               activeTab === "search"
                 ? "bg-red-600 text-white shadow-lg shadow-red-600/40 ring-1 ring-red-400"
                 : "bg-slate-900 text-slate-300 hover:bg-slate-800"
             }`}
           >
-            <span>🔍</span> Exact Search
+            <svg className="w-4 h-4 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            Exact Search
           </button>
 
           <button
             onClick={() => setActiveTab("directory")}
-            className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            className={`py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
               activeTab === "directory"
                 ? "bg-red-600 text-white shadow-lg shadow-red-600/40 ring-1 ring-red-400"
                 : "bg-slate-900 text-slate-300 hover:bg-slate-800"
             }`}
           >
-            <span>📋</span> Directory
+            <svg className="w-4 h-4 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            Directory
           </button>
         </div>
 
@@ -317,6 +367,8 @@ function App() {
             bloodGroups={bloodGroups} 
             requests={requests} 
             setRequests={setRequests} 
+            onShare={(req) => setSelectedShareReq(req)}
+            onReport={(req) => setSelectedReportReq(req)}
           />
         )}
 
@@ -345,7 +397,13 @@ function App() {
         {activeTab === "directory" && (
           <DonorList donors={donors} />
         )}
-      </div>   
+      </div>
+
+      {/* Ultra-Modern Footer */}
+      <Footer 
+        onSelectTab={setActiveTab} 
+        onSelectBloodGroup={handleQuickBloodGroupSelect} 
+      />
     </div>
   );
 }
