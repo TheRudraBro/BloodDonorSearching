@@ -1,208 +1,207 @@
 import React, { useState, useEffect } from 'react';
-import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [lastDonateDate, setLastDonateDate] = useState('');
+  const [lastDate, setLastDate] = useState('');
+  const [savedLastDate, setSavedLastDate] = useState('');
+  const [donationCount, setDonationCount] = useState(0);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const fallbackAvatar = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
-
-  // Firestore থেকে ইউজারের ডাটা লোড
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchProfile = async () => {
       if (user?.uid && db) {
+        setLoading(true);
         try {
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
             const data = userDoc.data();
-            if (data.lastDonatedDate) setLastDonateDate(data.lastDonatedDate);
-            if (data.photoURL) setPreviewUrl(data.photoURL);
+            const lastDonation = data.lastDonatedDate || '';
+            const historyList = data.donationHistory || (lastDonation ? [lastDonation] : []);
+            
+            setSavedLastDate(lastDonation);
+            setLastDate(lastDonation);
+            setHistory(historyList);
+            setDonationCount(data.donationCount || historyList.length || 0);
           }
         } catch (err) {
-          console.error("Error loading user profile:", err);
+          console.error("Profile error:", err);
+        } finally {
+          setLoading(false);
         }
       }
     };
-    if (isOpen) {
-      fetchUserData();
-    }
+
+    if (isOpen) fetchProfile();
   }, [isOpen, user]);
 
   if (!isOpen || !user) return null;
 
-  const currentPhoto = previewUrl || user.photoURL || fallbackAvatar;
-
-  // রক্তদানের যোগ্যতার দিন হিসাব (৯০ দিন গাইডলাইন)
-  const calculateAvailability = (dateString) => {
-    if (!dateString) return { isAvailable: true, text: "Ready to Donate" };
-    const lastDate = new Date(dateString);
-    const today = new Date();
-    const diffDays = Math.ceil(Math.abs(today - lastDate) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays >= 90) {
-      return { isAvailable: true, text: "Ready to Donate" };
-    } else {
-      return { isAvailable: false, text: `Resting (${90 - diffDays} Days Left)` };
-    }
-  };
-
-  const status = calculateAvailability(lastDonateDate);
-
-  // ফাইল আপলোড হ্যান্ডলার
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("Please upload an image smaller than 2MB.");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // প্রোফাইল সাবমিট ফায়ারবেসে
-  const handleSubmit = async (e) => {
+  const handleSaveDonationDate = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    if (!lastDate) return;
+    
+    if (lastDate === savedLastDate) {
+      setMessage("ℹ️ This donation date is already recorded.");
+      return;
+    }
+
+    setSaving(true);
+    setMessage('');
 
     try {
-      const photoToSave = previewUrl || user.photoURL || fallbackAvatar;
+      if (db && user?.uid) {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        let currentHistory = [];
+        let currentCount = 0;
 
-      // ১. Firestore-এ ডাটা আপডেট
-      if (user?.uid && db) {
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || 'Emergency Donor',
-          lastDonatedDate: lastDonateDate,
-          photoURL: photoToSave,
-          isAvailable: status.isAvailable,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      }
-
-      // ২. Firebase Auth Profile আপডেট (যদি URL হয়)
-      if (photoToSave && !photoToSave.startsWith('data:image')) {
-        try {
-          await updateProfile(user, { photoURL: photoToSave });
-        } catch (authErr) {
-          console.warn("Auth sync skipped:", authErr);
+        if (userSnap.exists()) {
+          const uData = userSnap.data();
+          currentHistory = uData.donationHistory || (uData.lastDonatedDate ? [uData.lastDonatedDate] : []);
+          currentCount = uData.donationCount || currentHistory.length || 0;
         }
-      }
 
-      alert("✅ Profile updated successfully!");
-      onClose();
+        const updatedHistory = [...currentHistory, lastDate];
+        const newCount = currentCount + 1;
+
+        await updateDoc(userRef, {
+          lastDonatedDate: lastDate,
+          donationHistory: arrayUnion(lastDate),
+          donationCount: newCount,
+          updatedAt: new Date().toISOString()
+        });
+
+        setSavedLastDate(lastDate);
+        setHistory(updatedHistory);
+        setDonationCount(newCount);
+        setMessage(`🎉 Blood donation recorded! Total: ${newCount} time(s).`);
+      }
     } catch (err) {
-      console.error("Update error:", err);
-      alert("Failed to update profile.");
+      console.error("Save error:", err);
+      setMessage("❌ Failed to save: " + err.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
-      {/* Container */}
-      <div className="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative text-white overflow-hidden">
-        
-        {/* Glow Effects */}
-        <div className="absolute -top-16 -left-16 w-36 h-36 bg-red-600/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute -bottom-16 -right-16 w-36 h-36 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+  // সবার জন্য নির্ভরযোগ্য ও প্রিমিয়াম 3D ভেক্টর অবতার
+  const displayName = user.displayName || 'Emergency Donor';
+  const autoAvatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(displayName)}&backgroundColor=b91c1c,991b1b,7f1d1d`;
+  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=dc2626&color=ffffff&bold=true`;
 
-        {/* Close Button */}
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn">
+      <div className="bg-[#0d1322] border border-red-950/80 rounded-3xl max-w-md w-full p-6 shadow-2xl relative text-white space-y-4">
+        
         <button 
           onClick={onClose} 
-          className="absolute top-4 right-4 text-slate-400 hover:text-white text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full bg-slate-800/80 hover:bg-slate-700 transition-colors z-20"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 z-20"
         >
           ✕
         </button>
 
-        <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
-          
-          {/* Avatar Header */}
-          <div className="text-center">
-            <div className="relative inline-block mb-3">
-              <img 
-                src={currentPhoto} 
-                alt="Profile Avatar" 
-                onError={(e) => { e.target.src = fallbackAvatar; }}
-                className="w-24 h-24 rounded-full bg-slate-800 border-2 border-red-500/80 p-1 object-cover mx-auto shadow-2xl shadow-red-950/60"
-              />
-              
-              {/* Photo Upload Floating Button */}
-              <label className="absolute bottom-1 right-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white p-2 rounded-full cursor-pointer shadow-lg transition-transform active:scale-90 border border-slate-900">
-                <span className="text-xs">📷</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleFileChange} 
-                  className="hidden" 
-                />
-              </label>
-            </div>
-
-            {/* Name & Email */}
-            <h3 className="text-lg font-black text-white flex items-center justify-center gap-1.5">
-              {user.displayName || 'Emergency Donor'}
-              <span className="text-blue-400 text-[9px] font-extrabold bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-500/30">
-                ✓
-              </span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">{user.email}</p>
-          </div>
-
-          {/* Availability Status Badge */}
-          <div className={`p-2.5 rounded-2xl border text-center transition-all ${
-            status.isAvailable 
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-              : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-          }`}>
-            <p className="text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${status.isAvailable ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`}></span>
-              {status.text}
-            </p>
-          </div>
-
-          {/* Last Donation Date Box */}
-          <div className="bg-slate-800/40 p-3.5 rounded-2xl border border-slate-800 space-y-1.5 backdrop-blur-sm">
-            <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
-              🩸 Last Donation Date:
-            </label>
-            <input 
-              type="date" 
-              value={lastDonateDate}
-              onChange={(e) => setLastDonateDate(e.target.value)}
-              className="input input-sm bg-slate-950 text-white border-slate-800 w-full text-xs rounded-xl focus:border-red-500 transition-colors"
+        {/* 🌟 100% Reliable Auto Avatar & User Info 🌟 */}
+        <div className="flex items-center gap-3.5 border-b border-slate-800/80 pb-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600/40 to-slate-900 border border-red-500/60 p-1 flex items-center justify-center shrink-0 shadow-lg shadow-red-950/50">
+            <img 
+              src={user.photoURL || autoAvatarUrl} 
+              alt="Avatar"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = fallbackAvatar;
+              }}
+              className="w-full h-full rounded-xl object-contain"
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className="space-y-2 pt-1">
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="btn btn-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white border-none w-full font-extrabold rounded-xl shadow-lg shadow-red-950/50 text-xs"
-            >
-              {loading ? 'Saving Changes...' : 'Save Profile Updates'}
-            </button>
+          <div className="min-w-0">
+            <h3 className="text-base font-black text-white truncate flex items-center gap-1.5">
+              <span className="truncate">{displayName}</span>
+              <span className="text-[10px] bg-red-600/20 text-red-400 border border-red-500/30 px-1.5 py-0.2 rounded-full font-bold">
+                Verified
+              </span>
+            </h3>
+            <p className="text-xs text-slate-400 truncate mt-0.5">{user.email}</p>
+          </div>
+        </div>
 
+        {/* Donation Count Display */}
+        <div className="grid grid-cols-2 gap-2 bg-[#080d1a] p-3 rounded-2xl border border-slate-800 text-center">
+          <div className="border-r border-slate-800/80 pr-2">
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Total Donated</p>
+            <h4 className="text-xl font-black text-red-500">{donationCount} <span className="text-xs font-semibold text-slate-300">Times</span></h4>
+          </div>
+          <div className="pl-2">
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Last Recorded</p>
+            <h4 className="text-xs font-bold text-amber-400 mt-1 truncate">{savedLastDate || 'No record yet'}</h4>
+          </div>
+        </div>
+
+        {message && (
+          <div className="p-2.5 rounded-xl bg-[#080d1a] border border-slate-800 text-xs text-center font-medium text-amber-300">
+            {message}
+          </div>
+        )}
+
+        {/* Update Form */}
+        <form onSubmit={handleSaveDonationDate} className="space-y-2.5">
+          <label className="text-xs font-bold text-slate-300 block">
+            🩸 Record Blood Donation Date:
+          </label>
+          <div className="flex gap-2">
+            <input 
+              type="date"
+              required
+              value={lastDate}
+              onChange={(e) => setLastDate(e.target.value)}
+              className="input input-sm bg-[#080d1a] text-white border-slate-800 text-xs rounded-xl flex-1 focus:border-red-500"
+            />
             <button 
-              type="button"
-              onClick={() => { onClose(); onLogout(); }} 
-              className="btn btn-xs bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-red-400 border-none w-full font-semibold rounded-xl"
+              type="submit"
+              disabled={saving || loading}
+              className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-none font-bold rounded-xl text-xs px-4 active:scale-95 shadow-md shadow-red-950/50"
             >
-              🔒 Logout Account
+              {saving ? 'Saving...' : 'Update & Count'}
             </button>
           </div>
-
+          <p className="text-[10px] text-slate-500">
+            * Adding a new donation date automatically increases your verified count and updates your Certificate of Honor.
+          </p>
         </form>
+
+        {/* Donation History */}
+        {history.length > 0 && (
+          <div className="space-y-1.5 pt-1">
+            <p className="text-[11px] font-bold text-slate-400">📜 Donation History Log:</p>
+            <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
+              {history.map((date, idx) => (
+                <div key={idx} className="flex justify-between items-center bg-[#080d1a] px-3 py-1.5 rounded-xl border border-slate-800/60 text-[11px]">
+                  <span className="text-slate-300">Donation #{idx + 1}</span>
+                  <span className="font-mono text-amber-400 font-bold">{date}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 🌟 BRIGHT RED LOG OUT BUTTON 🌟 */}
+        <div className="pt-2 border-t border-slate-800/80">
+          <button 
+            type="button"
+            onClick={() => {
+              onClose();
+              if (onLogout) onLogout();
+            }}
+            className="btn btn-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white border-none font-bold rounded-xl w-full text-xs shadow-lg shadow-red-950/60 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+          >
+            <span>🚪</span> Log Out Account
+          </button>
+        </div>
 
       </div>
     </div>

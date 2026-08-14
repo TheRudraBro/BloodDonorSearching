@@ -134,8 +134,15 @@ const Footer = ({ onSelectTab, onSelectBloodGroup }) => {
           <p>© {new Date().getFullYear()} Emergency Blood Finder. All rights reserved.</p>
           
           <div className="flex items-center justify-center gap-1 font-bold text-slate-400">
-            <span>Crafted with ❤️ by</span>
-            <span className="text-red-500 font-black">Rudra</span>
+            <span>🩸 Crafted with care by</span>
+           <a
+  href="https://github.com/TheRudraBro"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-red-500 font-black hover:underline hover:text-red-400 transition-colors"
+>
+  Rudra
+</a>
             
           </div>
         </div>
