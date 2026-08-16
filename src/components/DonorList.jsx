@@ -186,8 +186,9 @@ const DonorList = ({ donors = [] }) => {
             const waNumber = formatBangladeshPhone(donor.phone);
             const waMsg = `Hello ${donor.name || 'Brother/Sister'}, I got your contact from Emergency Blood Finder. We have an urgent blood requirement for ${donor.bloodGroup} blood. Are you currently available to donate?`;
 
-            // প্রত্যেক ডোনারের নিজস্ব photoURL
-            const donorImg = donor.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
+            // 🌟 Clean High-Res Google Photo or Premium Avatar 🌟
+            const donorImg = donor.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(donor.name || 'Donor')}&backgroundColor=b91c1c`;
+            const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
 
             return (
               <div
@@ -199,7 +200,8 @@ const DonorList = ({ donors = [] }) => {
                 {/* Profile Header */}
                 <div className="flex items-start justify-between gap-3 relative z-10">
                   <div className="flex items-center gap-3 min-w-0">
-                    {/* Donor's Individual Photo with Blood Badge below */}
+                    
+                    {/* 🌟 Profile Photo with Blood Badge below 🌟 */}
                     <div className="flex flex-col items-center shrink-0">
                       <img
                         src={donorImg}
@@ -207,11 +209,11 @@ const DonorList = ({ donors = [] }) => {
                         referrerPolicy="no-referrer"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
+                          e.target.src = fallbackImg;
                         }}
                         className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-slate-900 object-cover ring-2 ring-red-500/70 p-0.5 shadow-lg shadow-red-950/50"
                       />
-                      <span className="mt-1.5 px-2 py-0.5 bg-gradient-to-r from-red-600 to-red-700 text-white font-black text-[10px] rounded-md tracking-wider shadow-sm leading-none">
+                      <span className="mt-1.5 px-2.5 py-0.5 bg-gradient-to-r from-red-600 to-red-700 text-white font-black text-[10px] rounded-md tracking-wider shadow-sm leading-none">
                         {donor.bloodGroup}
                       </span>
                     </div>

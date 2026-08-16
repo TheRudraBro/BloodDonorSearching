@@ -22,7 +22,6 @@ const redPinIcon = L.divIcon({
   iconAnchor: [0, 0]
 });
 
-// Map View Auto Pan
 function MapViewController({ center }) {
   const map = useMap();
   useEffect(() => {
@@ -33,7 +32,6 @@ function MapViewController({ center }) {
   return null;
 }
 
-// Click Listener Component
 function LocationMarker({ position, setPosition }) {
   useMapEvents({
     click(e) {
@@ -46,7 +44,6 @@ function LocationMarker({ position, setPosition }) {
 const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"], donors = [], setDonors, user }) => {
   const divisionList = Object.keys(bangladeshGeoData || {});
 
-  // 1. First Declare formData State
   const [formData, setFormData] = useState({
     name: '',
     bloodGroup: 'A+',
@@ -63,7 +60,6 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
   const [existingDonor, setExistingDonor] = useState(null);
   const [gpsLoading, setGpsLoading] = useState(false);
 
-  // 2. Safe Dynamic Lists After formData is Declared
   const availableDistricts = bangladeshGeoData?.[formData.division]?.districts || {};
   const districtList = Object.keys(availableDistricts);
   const availableThanas = availableDistricts[formData.zila]?.thanas || [];
@@ -104,7 +100,6 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
     checkUserDonorStatus();
   }, [user, donors]);
 
-  // Division Change Handler
   const handleDivisionChange = (e) => {
     const newDiv = e.target.value;
     const districts = bangladeshGeoData[newDiv]?.districts || {};
@@ -121,7 +116,6 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
     setPosition(newCoords);
   };
 
-  // District Change Handler
   const handleDistrictChange = (e) => {
     const newDist = e.target.value;
     const firstThana = availableDistricts[newDist]?.thanas?.[0] || '';
@@ -167,13 +161,17 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
     }
 
     setLoading(true);
+    
+    // 🌟 Google / Auth Profile Image Extraction 🌟
+    const userPhoto = user.photoURL || user.providerData?.[0]?.photoURL || '';
+
     const newDonorData = {
       ...formData,
       lat: position[0],
       lng: position[1],
       uid: user.uid,
       email: user.email || '',
-      photoURL: user.photoURL || '',
+      photoURL: userPhoto,
       registeredAt: new Date().toISOString()
     };
 
@@ -199,7 +197,7 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
 
   if (checkingRegistration) {
     return (
-      <div className="bg-[#0d1322] p-8 text-center rounded-2xl border border-red-950/80 text-slate-400 text-xs w-full">
+      <div className="bg-[#0d1322] p-8 text-center rounded-3xl border border-red-950/80 text-slate-400 text-xs w-full">
         Checking your registration status...
       </div>
     );
@@ -207,26 +205,31 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
 
   if (!user) {
     return (
-      <div className="bg-[#0d1322] border border-red-950/80 rounded-2xl p-6 sm:p-10 text-center space-y-3 shadow-xl w-full">
+      <div className="bg-[#0d1322] border border-red-950/80 rounded-3xl p-6 sm:p-10 text-center space-y-3 shadow-2xl w-full">
         <span className="text-3xl">🔒</span>
         <h3 className="text-base sm:text-lg font-bold text-white">Login Required</h3>
         <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
-          You must log in with your account to register as a blood donor. Each account can register only once.
+          You must log in with your Google or verified account to register as a blood donor. Each account can register only once.
         </p>
       </div>
     );
   }
 
   if (existingDonor) {
+    const existingPhoto = existingDonor.photoURL || user?.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(existingDonor.name || 'Donor')}&backgroundColor=b91c1c`;
+
     return (
-      <div className="bg-[#0d1322] border border-red-950/80 rounded-2xl p-5 sm:p-8 shadow-xl w-full space-y-5">
+      <div className="bg-[#0d1322] border border-red-950/80 rounded-3xl p-5 sm:p-8 shadow-2xl w-full space-y-5">
         <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 font-bold text-xl flex items-center justify-center shrink-0">
-            ✓
-          </div>
+          <img 
+            src={existingPhoto}
+            alt={existingDonor.name}
+            referrerPolicy="no-referrer"
+            className="w-12 h-12 rounded-2xl bg-slate-900 object-cover ring-2 ring-emerald-500/80 p-0.5"
+          />
           <div>
             <h3 className="text-base sm:text-lg font-bold text-white">Already Registered as a Donor</h3>
-            <p className="text-xs text-emerald-400 font-medium">Your profile and location are active in the emergency network</p>
+            <p className="text-xs text-emerald-400 font-medium">Your profile & live photo are public in the emergency network</p>
           </div>
         </div>
 
@@ -259,7 +262,7 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
   }
 
   return (
-    <div className="bg-[#0d1322] border border-red-950/80 rounded-2xl p-5 sm:p-8 shadow-xl w-full space-y-5">
+    <div className="bg-[#0d1322] border border-red-950/80 rounded-3xl p-5 sm:p-8 shadow-2xl w-full space-y-5">
       <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
         <span className="text-red-500 text-2xl">📝</span>
         <div>

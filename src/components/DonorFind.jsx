@@ -41,7 +41,7 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
     return cleaned;
   };
 
-  // 📥 PDF Export for Exact Search Results
+  // 📥 PDF Export Function
   const handleExportSearchPDF = () => {
     if (matchedDonors.length === 0) {
       alert("No matched donors found to export!");
@@ -62,7 +62,7 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
 
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
-      const searchCriteria = `Search Query: Blood Group: [${requestedBloodData.bloodGroup || 'All'}] | Division: [${requestedBloodData.division || 'All'}] | District: [${requestedBloodData.zila || 'All'}]`;
+      const searchCriteria = `Search Query: Blood [${requestedBloodData.bloodGroup || 'All'}] | Division [${requestedBloodData.division || 'All'}] | District [${requestedBloodData.zila || 'All'}]`;
       doc.text(searchCriteria, 105, 19, { align: 'center' });
 
       doc.setFontSize(8);
@@ -250,8 +250,9 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
                 const waNumber = formatBangladeshPhone(donor.phone);
                 const waMsg = `Hello ${donor.name || 'Brother/Sister'}, I saw your profile on Emergency Blood Finder. We urgently need ${donor.bloodGroup} blood at ${requestedBloodData.zila || 'our area'}. Are you available to donate?`;
 
-                // প্রত্যেক ডোনারের নিজস্ব photoURL, না থাকলে তার নামের উপর ভিত্তি করে ডিফল্ট অবতার
-                const donorImg = donor.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
+                // 🌟 Clean High-Res Google Photo or Premium Avatar 🌟
+                const donorImg = donor.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(donor.name || 'Donor')}&backgroundColor=b91c1c`;
+                const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
 
                 return (
                   <div
@@ -263,7 +264,8 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
                     {/* Donor Header */}
                     <div className="flex items-start justify-between gap-3 relative z-10">
                       <div className="flex items-center gap-3 min-w-0">
-                        {/* Donor's Individual Photo with Blood Badge below */}
+                        
+                        {/* 🌟 Profile Photo with Blood Badge below 🌟 */}
                         <div className="flex flex-col items-center shrink-0">
                           <img
                             src={donorImg}
@@ -271,11 +273,11 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
                             referrerPolicy="no-referrer"
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
+                              e.target.src = fallbackImg;
                             }}
                             className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-slate-900 object-cover ring-2 ring-red-500/70 p-0.5 shadow-lg shadow-red-950/50"
                           />
-                          <span className="mt-1.5 px-2 py-0.5 bg-gradient-to-r from-red-600 to-red-700 text-white font-black text-[10px] rounded-md tracking-wider shadow-sm leading-none">
+                          <span className="mt-1.5 px-2.5 py-0.5 bg-gradient-to-r from-red-600 to-red-700 text-white font-black text-[10px] rounded-md tracking-wider shadow-sm leading-none">
                             {donor.bloodGroup}
                           </span>
                         </div>
