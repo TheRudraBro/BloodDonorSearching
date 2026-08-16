@@ -139,16 +139,16 @@ function App() {
   return (
     <div className="bg-[#070b14] min-h-screen text-white flex flex-col justify-between selection:bg-red-600 selection:text-white antialiased">
       
-      {/* FULL SCREEN WIDE DESKTOP CONTAINER */}
+      {/* Maximum Screen Wide Layout Container */}
       <main className="w-full max-w-[96%] xl:max-w-[1600px] 2xl:max-w-[1720px] mx-auto py-3 sm:py-5 px-2 sm:px-4 lg:px-6 space-y-3.5 sm:space-y-4 flex-1">
         
-        {/* 1. Header */}
+        {/* 1. Header Banner */}
         <Header />
 
         {/* 2. Live Alert Ticker */}
         <LiveEmergencyTicker requests={requests} />
 
-        {/* 3. Top Profile Bar (Fixed Image Loading Issue) */}
+        {/* 3. User Profile / Login Bar */}
         <div className="w-full bg-[#0d1322] p-3 sm:p-4 rounded-2xl border border-red-950/80 flex items-center justify-between gap-3 shadow-xl">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {user ? (
@@ -287,6 +287,7 @@ function App() {
               bloodGroups={bloodGroups} 
               donors={donors} 
               setDonors={setDonors} 
+              user={user}
             />
           )}
 
