@@ -3,7 +3,6 @@ import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { bangladeshGeoData } from '../data/bangladeshGeoData';
 
-// Admin Emails List
 const ADMIN_EMAILS = [
   "20234103278@cse.bubt.edu.bd",
   "admin@bloodfinder.com"
@@ -79,19 +78,12 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
     e.preventDefault();
 
     if (!user) return;
-
-    if (!newRequest.patientName || !newRequest.hospital || !newRequest.phone || !newRequest.expireDate || !newRequest.expireTime) {
-      alert("Please fill in all required fields!");
-      return;
-    }
+    if (!newRequest.patientName || !newRequest.hospital || !newRequest.phone || !newRequest.expireDate || !newRequest.expireTime) return;
 
     const deadlineString = `${newRequest.expireDate}T${newRequest.expireTime}`;
     const deadlineTimestamp = new Date(deadlineString).getTime();
 
-    if (isNaN(deadlineTimestamp) || deadlineTimestamp <= new Date().getTime()) {
-      alert("⚠️ Deadline must be a future date and time!");
-      return;
-    }
+    if (isNaN(deadlineTimestamp) || deadlineTimestamp <= new Date().getTime()) return;
 
     const formattedNeededTime = new Date(deadlineString).toLocaleString('en-US', {
       month: 'short',
@@ -141,29 +133,22 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
         expireTime: '18:00',
         status: 'Emergency'
       });
-      alert("✅ Urgent blood request published successfully!");
     } catch (err) {
       console.error(err);
-      alert("Failed to post request: " + err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleAdminDeleteRequest = async (req) => {
-    if (!isAdmin) return;
-    const confirmDelete = window.confirm(`[ADMIN ACTION] Are you sure you want to delete blood request for: "${req.patientName}"?`);
-    if (!confirmDelete) return;
-
+    if (!isAdmin) return; //
     setDeletingId(req.id);
     try {
       if (db && req.id) {
         await deleteDoc(doc(db, "patient_requests", req.id));
-        alert("✅ Request deleted permanently from database.");
       }
     } catch (err) {
       console.error(err);
-      alert("Delete failed: " + err.message);
     } finally {
       setDeletingId(null);
     }
@@ -198,8 +183,7 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
 
   return (
     <div className="space-y-4">
-      
-      {/* 🔒 LOGOUT STATE: LOGIN REQUIRED CARD (Same as Registration) */}
+      {/* 🔒 LOGOUT STATE: LOGIN REQUIRED CARD */}
       {!user && (
         <div className="bg-[#0d1322] border border-red-950/80 rounded-3xl p-6 sm:p-10 text-center space-y-3 shadow-2xl w-full">
           <span className="text-3xl">🔒</span>
@@ -247,7 +231,6 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
             {bloodGroups.map((bg) => (<option key={bg} value={bg}>{bg}</option>))}
           </select>
 
-          {/* ইউজার লগইন থাকলে শুধুমাত্র পোস্ট বাটন দৃশ্যমান হবে */}
           {user && (
             <button
               onClick={() => setShowAddModal(true)}
@@ -259,7 +242,7 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
         </div>
       </div>
 
-      {/* 🎴 ULTRA-PREMIUM PATIENT CARDS WITH AUTHOR PROFILE */}
+      {/* Ultra-Premium Patient Cards */}
       {filteredRequests.length === 0 ? (
         <div className="bg-[#0d1322] p-8 text-center rounded-3xl border border-red-950/80 text-slate-400 text-xs font-medium">
           No active emergency blood requests right now.
@@ -276,10 +259,8 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
                 key={req.id}
                 className="relative overflow-hidden bg-gradient-to-b from-[#0e1628] to-[#090e1c] border border-red-950/90 hover:border-red-500/50 p-4 rounded-3xl shadow-xl space-y-3.5 transition-all group flex flex-col justify-between"
               >
-                {/* Glow Overlay */}
                 <div className="absolute top-0 right-0 w-28 h-28 bg-red-600/5 rounded-full blur-xl pointer-events-none group-hover:bg-red-600/10 transition-all"></div>
 
-                {/* Top Poster / Author Header Bar */}
                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5 relative z-10">
                   <div className="flex items-center gap-2 min-w-0">
                     <img
@@ -302,10 +283,8 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
                   </span>
                 </div>
 
-                {/* Patient Main Info */}
                 <div className="flex items-start justify-between gap-3 relative z-10">
                   <div className="flex items-center gap-3 min-w-0">
-                    {/* Big Blood Badge */}
                     <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-red-600 to-red-800 border border-red-400/50 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-lg shadow-red-950/60">
                       {req.bloodGroup}
                     </div>
@@ -324,7 +303,6 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
                   </div>
                 </div>
 
-                {/* Location & Hospital Info Box */}
                 <div className="bg-[#060a14]/90 px-3 py-2.5 rounded-2xl border border-slate-800/80 text-[11px] space-y-1.5 text-slate-300 relative z-10">
                   <p className="truncate flex items-center gap-1.5">
                     <span className="text-red-400">🏥</span> <strong className="text-slate-200">{req.hospital}</strong>
@@ -337,7 +315,6 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
                   </div>
                 </div>
 
-                {/* 4 Action Buttons */}
                 <div className="grid grid-cols-4 gap-1.5 pt-0.5 relative z-10">
                   <button
                     type="button"
@@ -371,7 +348,6 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
                   </a>
                 </div>
 
-                {/* Admin Delete Option */}
                 {isAdmin && (
                   <div className="pt-1.5 border-t border-red-950/80 relative z-10">
                     <button
@@ -390,7 +366,7 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
         </div>
       )}
 
-      {/* 🌟 LOGGED-IN POST CREATION MODAL 🌟 */}
+      {/* Post Modal */}
       {showAddModal && user && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn">
           <div className="bg-[#0d1322] border border-red-950/80 rounded-3xl max-w-lg w-full p-5 sm:p-6 text-white space-y-4 relative shadow-2xl">
@@ -401,7 +377,6 @@ const PatientRequestFeed = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-
               ✕
             </button>
 
-            {/* Poster Info Header */}
             <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
               <img
                 src={user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || 'User')}&background=dc2626&color=ffffff&bold=true`}

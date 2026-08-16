@@ -6,7 +6,6 @@ import 'leaflet/dist/leaflet.css';
 import { db } from '../firebase/config';
 import { bangladeshGeoData } from '../data/bangladeshGeoData';
 
-// 🔴 Red Neon Map Pin Icon
 const redPinIcon = L.divIcon({
   className: 'custom-red-pin',
   html: `
@@ -137,32 +136,19 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
           setPosition([pos.coords.latitude, pos.coords.longitude]);
           setGpsLoading(false);
         },
-        (err) => {
-          console.error(err);
-          alert("Could not fetch GPS location. Please select on the map.");
+        () => {
           setGpsLoading(false);
         },
         { enableHighAccuracy: true }
       );
-    } else {
-      alert("Geolocation is not supported by your browser.");
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user) {
-      alert("⚠️ You must be logged in to register as a donor!");
-      return;
-    }
-    if (existingDonor) {
-      alert("⚠️ You are already registered as a donor!");
-      return;
-    }
+    if (!user || existingDonor) return;
 
     setLoading(true);
-    
-    // 🌟 Google / Auth Profile Image Extraction 🌟
     const userPhoto = user.photoURL || user.providerData?.[0]?.photoURL || '';
 
     const newDonorData = {
@@ -186,10 +172,8 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
 
       if (setDonors) setDonors(prev => [...prev, newDonorData]);
       setExistingDonor(newDonorData);
-      alert("🎉 Successfully registered as a verified blood donor!");
     } catch (err) {
       console.error(err);
-      alert("Registration failed: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -267,7 +251,7 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
         <span className="text-red-500 text-2xl">📝</span>
         <div>
           <h3 className="text-base sm:text-lg font-bold text-white">Donor Registration & Area Pin</h3>
-          <p className="text-xs text-slate-400">Select your Division, District and Thana to pin your exact location[cite: 1]</p>
+          <p className="text-xs text-slate-400">Select your Division, District and Thana to pin your exact location</p>
         </div>
       </div>
 
@@ -309,7 +293,7 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
           </div>
         </div>
 
-        {/* CASCADING DIVISION -> DISTRICT -> THANA SELECTORS */}
+        {/* Geographic Cascading Selectors */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 bg-[#080d1a] p-3.5 sm:p-4 rounded-2xl border border-slate-800">
           <div>
             <label className="text-xs text-slate-300 font-bold block mb-1.5">1. Division (বিভাগ)</label>
@@ -345,7 +329,7 @@ const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O
           </div>
         </div>
 
-        {/* INTERACTIVE MAP */}
+        {/* Interactive Map */}
         <div className="space-y-2 bg-[#080d1a] p-3.5 sm:p-4 rounded-2xl border border-slate-800">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>

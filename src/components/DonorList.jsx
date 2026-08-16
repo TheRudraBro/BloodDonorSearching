@@ -10,7 +10,6 @@ const DonorList = ({ donors = [], user }) => {
   const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
   const divisions = ["Dhaka", "Chattogram", "Khulna", "Rajshahi", "Sylhet", "Barishal", "Rangpur", "Mymensingh"];
 
-  // 🔒 লগইন না থাকলে পুরো ডিরেক্টরি ব্লক
   if (!user) {
     return (
       <div className="bg-[#0d1322] border border-red-950/80 rounded-3xl p-6 sm:p-10 text-center space-y-3 shadow-2xl w-full">
@@ -44,10 +43,7 @@ const DonorList = ({ donors = [], user }) => {
   };
 
   const handleExportPDF = () => {
-    if (filteredDonors.length === 0) {
-      alert("No donor records found to export!");
-      return;
-    }
+    if (filteredDonors.length === 0) return;
 
     setIsExporting(true);
     try {
@@ -99,6 +95,8 @@ const DonorList = ({ donors = [], user }) => {
           doc.text("Location (District / Area)", 105, startY + 5.5);
           doc.text("Contact Phone", 165, startY + 5.5);
           startY += 8;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8.5);
         }
 
         if (idx % 2 === 0) {
@@ -128,7 +126,6 @@ const DonorList = ({ donors = [], user }) => {
       doc.save(`Blood-Donors-Directory-${dateStr.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       console.error("PDF Export Error:", err);
-      alert("Failed to export PDF: " + err.message);
     } finally {
       setIsExporting(false);
     }

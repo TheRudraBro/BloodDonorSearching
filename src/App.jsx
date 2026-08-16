@@ -34,7 +34,7 @@ const computeScore = (donor, requestedBloodData) => {
 function App() {
   const [donors, setDonors] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [activeTab, setActiveTab] = useState("");
+  const [activeTab, setActiveTab] = useState("register");
   const [isChartOpen, setIsChartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -126,7 +126,6 @@ function App() {
   const handleLogout = async () => {
     if (auth) {
       await signOut(auth);
-      alert("Logged out successfully!");
     }
   };
 
@@ -135,7 +134,7 @@ function App() {
   return (
     <div className="bg-[#070b14] min-h-screen text-white flex flex-col justify-between selection:bg-red-600 selection:text-white antialiased">
       
-      {/* Main Container */}
+      {/* Maximum Screen Wide Layout Container */}
       <main className="w-full max-w-[96%] xl:max-w-[1600px] 2xl:max-w-[1720px] mx-auto py-3 sm:py-5 px-2 sm:px-4 lg:px-6 space-y-3.5 sm:space-y-4 flex-1">
         
         {/* 1. Header Banner */}
@@ -220,7 +219,7 @@ function App() {
         <DonorRewardsModal isOpen={isRewardsOpen} onClose={() => setIsRewardsOpen(false)} user={user} />
         <EmergencyPosterModal isOpen={!!selectedPosterReq} onClose={() => setSelectedPosterReq(null)} request={selectedPosterReq} />
 
-        {/* 5. Navigation Tabs */}
+        {/* 5. 4 Navigation Tabs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1.5 sm:p-2 rounded-2xl border bg-[#0d1322] border-red-950/80 shadow-2xl">
           <button
             onClick={() => setActiveTab("requests")}
@@ -296,7 +295,6 @@ function App() {
                 matchedDonors={matchedList}
                 user={user}
               />
-              {/* 🗺️ শুধুমাত্র লগইন থাকা অবস্থায় ম্যাপ প্রদর্শিত হবে 🗺️ */}
               {user && (
                 <DonorMap donors={requestedBloodData.bloodGroup ? matchedList : []} />
               )}

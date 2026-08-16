@@ -15,7 +15,6 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
     ? availableDistricts[requestedBloodData.zila]?.thanas || []
     : [];
 
-  // 🔒 লগইন না থাকলে পুরো সার্চ ফিচার ব্লক
   if (!user) {
     return (
       <div className="bg-[#0d1322] border border-red-950/80 rounded-3xl p-6 sm:p-10 text-center space-y-3 shadow-2xl w-full">
@@ -55,10 +54,7 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
   };
 
   const handleExportSearchPDF = () => {
-    if (matchedDonors.length === 0) {
-      alert("No matched donors found to export!");
-      return;
-    }
+    if (matchedDonors.length === 0) return;
 
     setIsExporting(true);
     try {
@@ -145,7 +141,6 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
       doc.save(`Matched-Donors-${requestedBloodData.bloodGroup || 'All'}-${dateStr.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       console.error("PDF Export Error:", err);
-      alert("Failed to export PDF: " + err.message);
     } finally {
       setIsExporting(false);
     }
@@ -162,7 +157,7 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-black text-white tracking-wide">Exact Donor Search Engine</h3>
-              <p className="text-[10px] sm:text-[11px] text-slate-400">Locate compatible donors based on division, district, and thana[cite: 1]</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-400">Locate compatible donors based on division, district, and thana</p>
             </div>
           </div>
 
@@ -238,7 +233,7 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
         </div>
       </div>
 
-      {/* 🎴 MATCHED DONOR CARDS */}
+      {/* Matched Donor Cards */}
       {requestedBloodData.bloodGroup && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
