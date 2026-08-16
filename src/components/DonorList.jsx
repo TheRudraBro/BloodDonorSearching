@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 
-const DonorList = ({ donors = [] }) => {
+const DonorList = ({ donors = [], user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('ALL');
   const [selectedDivision, setSelectedDivision] = useState('ALL');
@@ -9,6 +9,19 @@ const DonorList = ({ donors = [] }) => {
 
   const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
   const divisions = ["Dhaka", "Chattogram", "Khulna", "Rajshahi", "Sylhet", "Barishal", "Rangpur", "Mymensingh"];
+
+  // 🔒 লগইন না থাকলে পুরো ডিরেক্টরি ব্লক
+  if (!user) {
+    return (
+      <div className="bg-[#0d1322] border border-red-950/80 rounded-3xl p-6 sm:p-10 text-center space-y-3 shadow-2xl w-full">
+        <span className="text-3xl">🔒</span>
+        <h3 className="text-base sm:text-lg font-bold text-white">Login Required</h3>
+        <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
+          You must log in with your Google or verified account to browse the registered donor directory and export records.
+        </p>
+      </div>
+    );
+  }
 
   const filteredDonors = donors.filter((donor) => {
     const matchSearch =
@@ -186,7 +199,6 @@ const DonorList = ({ donors = [] }) => {
             const waNumber = formatBangladeshPhone(donor.phone);
             const waMsg = `Hello ${donor.name || 'Brother/Sister'}, I got your contact from Emergency Blood Finder. We have an urgent blood requirement for ${donor.bloodGroup} blood. Are you currently available to donate?`;
 
-            // 🌟 Clean High-Res Google Photo or Premium Avatar 🌟
             const donorImg = donor.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(donor.name || 'Donor')}&backgroundColor=b91c1c`;
             const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
 
@@ -197,11 +209,8 @@ const DonorList = ({ donors = [] }) => {
               >
                 <div className="absolute top-0 right-0 w-24 h-24 bg-red-600/5 rounded-full blur-xl pointer-events-none group-hover:bg-red-600/10 transition-all"></div>
 
-                {/* Profile Header */}
                 <div className="flex items-start justify-between gap-3 relative z-10">
                   <div className="flex items-center gap-3 min-w-0">
-                    
-                    {/* 🌟 Profile Photo with Blood Badge below 🌟 */}
                     <div className="flex flex-col items-center shrink-0">
                       <img
                         src={donorImg}
@@ -218,7 +227,6 @@ const DonorList = ({ donors = [] }) => {
                       </span>
                     </div>
 
-                    {/* Details */}
                     <div className="min-w-0">
                       <h4 className="text-sm font-bold text-white truncate leading-tight group-hover:text-red-400 transition-colors">
                         {donor.name || 'Anonymous Donor'}
@@ -237,13 +245,11 @@ const DonorList = ({ donors = [] }) => {
                   </span>
                 </div>
 
-                {/* Contact Info Box */}
                 <div className="bg-[#060a14]/90 px-3 py-2 rounded-2xl border border-slate-800/80 text-[11px] flex justify-between items-center relative z-10">
                   <span className="text-slate-400 font-medium">Phone:</span>
                   <strong className="text-red-400 font-mono text-xs tracking-wider">{donor.phone || 'Hidden'}</strong>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="grid grid-cols-3 gap-2 pt-0.5 relative z-10">
                   <a
                     href={`tel:${cleanPhone}`}
@@ -277,4 +283,4 @@ const DonorList = ({ donors = [] }) => {
   );
 };
 
-export default DonorList; 
+export default DonorList;

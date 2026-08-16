@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import { bangladeshGeoData } from '../data/bangladeshGeoData';
 
-const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, matchedDonors = [] }) => {
+const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, matchedDonors = [], user }) => {
   const [isExporting, setIsExporting] = useState(false);
   const divisionList = Object.keys(bangladeshGeoData || {});
 
@@ -14,6 +14,19 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
   const availableThanas = requestedBloodData.division && requestedBloodData.zila
     ? availableDistricts[requestedBloodData.zila]?.thanas || []
     : [];
+
+  // 🔒 লগইন না থাকলে পুরো সার্চ ফিচার ব্লক
+  if (!user) {
+    return (
+      <div className="bg-[#0d1322] border border-red-950/80 rounded-3xl p-6 sm:p-10 text-center space-y-3 shadow-2xl w-full">
+        <span className="text-3xl">🔒</span>
+        <h3 className="text-base sm:text-lg font-bold text-white">Login Required</h3>
+        <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
+          You must log in with your Google or verified account to use the Exact Donor Search Engine and access donor details.
+        </p>
+      </div>
+    );
+  }
 
   const handleDivisionChange = (e) => {
     const div = e.target.value;
@@ -41,7 +54,6 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
     return cleaned;
   };
 
-  // 📥 PDF Export Function
   const handleExportSearchPDF = () => {
     if (matchedDonors.length === 0) {
       alert("No matched donors found to export!");
@@ -150,7 +162,7 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-black text-white tracking-wide">Exact Donor Search Engine</h3>
-              <p className="text-[10px] sm:text-[11px] text-slate-400">Locate compatible donors based on division, district, and thana</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-400">Locate compatible donors based on division, district, and thana[cite: 1]</p>
             </div>
           </div>
 
@@ -226,7 +238,7 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
         </div>
       </div>
 
-      {/* 🎴 PREMIUM MATCHED DONOR CARDS */}
+      {/* 🎴 MATCHED DONOR CARDS */}
       {requestedBloodData.bloodGroup && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
@@ -250,7 +262,6 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
                 const waNumber = formatBangladeshPhone(donor.phone);
                 const waMsg = `Hello ${donor.name || 'Brother/Sister'}, I saw your profile on Emergency Blood Finder. We urgently need ${donor.bloodGroup} blood at ${requestedBloodData.zila || 'our area'}. Are you available to donate?`;
 
-                // 🌟 Clean High-Res Google Photo or Premium Avatar 🌟
                 const donorImg = donor.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(donor.name || 'Donor')}&backgroundColor=b91c1c`;
                 const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
 
@@ -261,11 +272,8 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-red-600/5 rounded-full blur-xl pointer-events-none group-hover:bg-red-600/10 transition-all"></div>
 
-                    {/* Donor Header */}
                     <div className="flex items-start justify-between gap-3 relative z-10">
                       <div className="flex items-center gap-3 min-w-0">
-                        
-                        {/* 🌟 Profile Photo with Blood Badge below 🌟 */}
                         <div className="flex flex-col items-center shrink-0">
                           <img
                             src={donorImg}
@@ -282,7 +290,6 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
                           </span>
                         </div>
 
-                        {/* Text Info */}
                         <div className="min-w-0">
                           <h4 className="text-sm font-bold text-white truncate leading-tight group-hover:text-red-400 transition-colors">
                             {donor.name || 'Anonymous Donor'}
@@ -296,7 +303,6 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
                         </div>
                       </div>
 
-                      {/* Match Score */}
                       {donor.score && (
                         <span className="bg-emerald-950/90 text-emerald-400 border border-emerald-500/40 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full shrink-0 shadow-sm">
                           {donor.score}% Match
@@ -304,13 +310,11 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
                       )}
                     </div>
 
-                    {/* Phone Bar */}
                     <div className="bg-[#060a14]/90 px-3 py-2 rounded-2xl border border-slate-800/80 text-[11px] flex justify-between items-center relative z-10">
                       <span className="text-slate-400 font-medium">Phone:</span>
                       <strong className="text-red-400 font-mono text-xs tracking-wider">{donor.phone || 'Hidden'}</strong>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="grid grid-cols-3 gap-2 pt-0.5 relative z-10">
                       <a
                         href={`tel:${cleanPhone}`}
