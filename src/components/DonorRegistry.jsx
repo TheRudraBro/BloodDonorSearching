@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, doc, setDoc, getDoc } from 'firebase/firestore';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { db } from '../firebase/config';
+import { bangladeshGeoData } from '../data/bangladeshGeoData';
 
-// 🔴 Custom Red Neon Map Pin Icon
+// 🔴 Red Neon Map Pin Icon
 const redPinIcon = L.divIcon({
   className: 'custom-red-pin',
   html: `
@@ -21,34 +22,51 @@ const redPinIcon = L.divIcon({
   iconAnchor: [0, 0]
 });
 
-// Map Click Listener Component
+// Map View Auto Pan
+function MapViewController({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.flyTo(center, 13, { duration: 1.5 });
+    }
+  }, [center, map]);
+  return null;
+}
+
+// Click Listener Component
 function LocationMarker({ position, setPosition }) {
   useMapEvents({
     click(e) {
       setPosition([e.latlng.lat, e.latlng.lng]);
     },
   });
-
   return position ? <Marker position={position} icon={redPinIcon} /> : null;
 }
 
-const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user }) => {
+const DonorRegistry = ({ bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"], donors = [], setDonors, user }) => {
+  const divisionList = Object.keys(bangladeshGeoData || {});
+
+  // 1. First Declare formData State
   const [formData, setFormData] = useState({
     name: '',
     bloodGroup: 'A+',
     division: 'Dhaka',
-    zila: '',
-    thana: '',
+    zila: 'Dhaka',
+    thana: 'Mirpur Model',
     phone: '',
     available: true
   });
 
-  // Default: Dhaka Coordinates
   const [position, setPosition] = useState([23.8103, 90.4125]);
   const [loading, setLoading] = useState(false);
   const [checkingRegistration, setCheckingRegistration] = useState(true);
   const [existingDonor, setExistingDonor] = useState(null);
   const [gpsLoading, setGpsLoading] = useState(false);
+
+  // 2. Safe Dynamic Lists After formData is Declared
+  const availableDistricts = bangladeshGeoData?.[formData.division]?.districts || {};
+  const districtList = Object.keys(availableDistricts);
+  const availableThanas = availableDistricts[formData.zila]?.thanas || [];
 
   useEffect(() => {
     const checkUserDonorStatus = async () => {
@@ -86,7 +104,37 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
     checkUserDonorStatus();
   }, [user, donors]);
 
-  // GPS Location Handler
+  // Division Change Handler
+  const handleDivisionChange = (e) => {
+    const newDiv = e.target.value;
+    const districts = bangladeshGeoData[newDiv]?.districts || {};
+    const firstDistrict = Object.keys(districts)[0] || '';
+    const firstThana = districts[firstDistrict]?.thanas?.[0] || '';
+    const newCoords = districts[firstDistrict]?.coords || [23.8103, 90.4125];
+
+    setFormData({
+      ...formData,
+      division: newDiv,
+      zila: firstDistrict,
+      thana: firstThana
+    });
+    setPosition(newCoords);
+  };
+
+  // District Change Handler
+  const handleDistrictChange = (e) => {
+    const newDist = e.target.value;
+    const firstThana = availableDistricts[newDist]?.thanas?.[0] || '';
+    const newCoords = availableDistricts[newDist]?.coords || position;
+
+    setFormData({
+      ...formData,
+      zila: newDist,
+      thana: firstThana
+    });
+    setPosition(newCoords);
+  };
+
   const handleGetCurrentLocation = () => {
     if (navigator.geolocation) {
       setGpsLoading(true);
@@ -97,7 +145,7 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
         },
         (err) => {
           console.error(err);
-          alert("Could not fetch GPS location. Please pin manually on the map.");
+          alert("Could not fetch GPS location. Please select on the map.");
           setGpsLoading(false);
         },
         { enableHighAccuracy: true }
@@ -109,19 +157,12 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!user) {
       alert("⚠️ You must be logged in to register as a donor!");
       return;
     }
-
     if (existingDonor) {
-      alert("⚠️ You are already registered as a donor with this account!");
-      return;
-    }
-
-    if (!formData.name || !formData.zila || !formData.phone) {
-      alert("Please fill all required fields!");
+      alert("⚠️ You are already registered as a donor!");
       return;
     }
 
@@ -132,25 +173,22 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
       lng: position[1],
       uid: user.uid,
       email: user.email || '',
+      photoURL: user.photoURL || '',
       registeredAt: new Date().toISOString()
     };
 
     try {
       if (db) {
         const docRef = await addDoc(collection(db, "donors"), newDonorData);
-        
         await setDoc(doc(db, "users", user.uid), {
           isDonorRegistered: true,
           donorData: { id: docRef.id, ...newDonorData }
         }, { merge: true });
       }
 
-      if (setDonors) {
-        setDonors(prev => [...prev, newDonorData]);
-      }
-
+      if (setDonors) setDonors(prev => [...prev, newDonorData]);
       setExistingDonor(newDonorData);
-      alert("🎉 Successfully registered with your pinned location!");
+      alert("🎉 Successfully registered as a verified blood donor!");
     } catch (err) {
       console.error(err);
       alert("Registration failed: " + err.message);
@@ -173,7 +211,7 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
         <span className="text-3xl">🔒</span>
         <h3 className="text-base sm:text-lg font-bold text-white">Login Required</h3>
         <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
-          You must log in with your Google or verified account to register as a blood donor. Each account can register only once.
+          You must log in with your account to register as a blood donor. Each account can register only once.
         </p>
       </div>
     );
@@ -188,7 +226,7 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
           </div>
           <div>
             <h3 className="text-base sm:text-lg font-bold text-white">Already Registered as a Donor</h3>
-            <p className="text-xs text-emerald-400 font-medium">Your profile and location are active in the live directory</p>
+            <p className="text-xs text-emerald-400 font-medium">Your profile and location are active in the emergency network</p>
           </div>
         </div>
 
@@ -205,19 +243,17 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
           </div>
           <div className="space-y-1">
             <span className="text-slate-500 block text-[11px]">Location:</span>
-            <strong className="text-white text-sm block truncate">{existingDonor.division}, {existingDonor.zila}</strong>
+            <strong className="text-white text-sm block truncate">
+              {existingDonor.thana ? `${existingDonor.thana}, ` : ''}{existingDonor.zila}, {existingDonor.division}
+            </strong>
           </div>
           <div className="space-y-1">
             <span className="text-slate-500 block text-[11px]">GPS Coordinates:</span>
             <strong className="text-red-400 font-mono text-xs block">
-              {existingDonor.lat ? `${existingDonor.lat.toFixed(4)}, ${existingDonor.lng.toFixed(4)}` : 'Manual City'}
+              {existingDonor.lat ? `${existingDonor.lat.toFixed(4)}, ${existingDonor.lng.toFixed(4)}` : 'Manual Location'}
             </strong>
           </div>
         </div>
-
-        <p className="text-xs text-slate-400 text-center italic">
-          * Each verified account is restricted to a single donor registration to prevent duplicate entries.
-        </p>
       </div>
     );
   }
@@ -227,15 +263,13 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
       <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
         <span className="text-red-500 text-2xl">📝</span>
         <div>
-          <h3 className="text-base sm:text-lg font-bold text-white">Donor Registration & Map Pin</h3>
-          <p className="text-xs text-slate-400">Fill your details and pin your exact location with the red marker</p>
+          <h3 className="text-base sm:text-lg font-bold text-white">Donor Registration & Area Pin</h3>
+          <p className="text-xs text-slate-400">Select your Division, District and Thana to pin your exact location[cite: 1]</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        
-        {/* Input fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
           <div>
             <label className="text-xs text-slate-300 font-bold block mb-1.5">Full Name</label>
             <input
@@ -246,6 +280,17 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="input input-sm sm:input-md bg-[#080d1a] border-slate-700 text-white w-full rounded-xl text-xs sm:text-sm focus:border-red-500"
             />
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-300 font-bold block mb-1.5">Blood Group</label>
+            <select
+              value={formData.bloodGroup}
+              onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
+              className="select select-sm sm:select-md bg-[#080d1a] border-slate-700 text-white w-full rounded-xl text-xs sm:text-sm focus:border-red-500"
+            >
+              {bloodGroups.map(bg => (<option key={bg} value={bg}>{bg}</option>))}
+            </select>
           </div>
 
           <div>
@@ -261,62 +306,51 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        {/* CASCADING DIVISION -> DISTRICT -> THANA SELECTORS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 bg-[#080d1a] p-3.5 sm:p-4 rounded-2xl border border-slate-800">
           <div>
-            <label className="text-xs text-slate-300 font-bold block mb-1.5">Blood Group</label>
-            <select
-              value={formData.bloodGroup}
-              onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
-              className="select select-sm sm:select-md bg-[#080d1a] border-slate-700 text-white w-full rounded-xl text-xs sm:text-sm focus:border-red-500"
-            >
-              {bloodGroups.map(bg => (<option key={bg} value={bg}>{bg}</option>))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs text-slate-300 font-bold block mb-1.5">Division</label>
+            <label className="text-xs text-slate-300 font-bold block mb-1.5">1. Division (বিভাগ)</label>
             <select
               value={formData.division}
-              onChange={(e) => setFormData({ ...formData, division: e.target.value })}
-              className="select select-sm sm:select-md bg-[#080d1a] border-slate-700 text-white w-full rounded-xl text-xs sm:text-sm focus:border-red-500"
+              onChange={handleDivisionChange}
+              className="select select-sm sm:select-md bg-[#0d1322] border-slate-700 text-white w-full rounded-xl text-xs sm:text-sm focus:border-red-500"
             >
-              {divisions.map(div => (<option key={div} value={div}>{div}</option>))}
+              {divisionList.map(div => (<option key={div} value={div}>{div}</option>))}
             </select>
           </div>
 
           <div>
-            <label className="text-xs text-slate-300 font-bold block mb-1.5">District (Zila)</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Dhaka"
+            <label className="text-xs text-slate-300 font-bold block mb-1.5">2. District (জেলা)</label>
+            <select
               value={formData.zila}
-              onChange={(e) => setFormData({ ...formData, zila: e.target.value })}
-              className="input input-sm sm:input-md bg-[#080d1a] border-slate-700 text-white w-full rounded-xl text-xs sm:text-sm focus:border-red-500"
-            />
+              onChange={handleDistrictChange}
+              className="select select-sm sm:select-md bg-[#0d1322] border-slate-700 text-white w-full rounded-xl text-xs sm:text-sm focus:border-red-500"
+            >
+              {districtList.map(dist => (<option key={dist} value={dist}>{dist}</option>))}
+            </select>
           </div>
 
           <div>
-            <label className="text-xs text-slate-300 font-bold block mb-1.5">Thana / Area</label>
-            <input
-              type="text"
-              placeholder="e.g. Mirpur"
+            <label className="text-xs text-slate-300 font-bold block mb-1.5">3. Police Station (থানা / এলাকা)</label>
+            <select
               value={formData.thana}
               onChange={(e) => setFormData({ ...formData, thana: e.target.value })}
-              className="input input-sm sm:input-md bg-[#080d1a] border-slate-700 text-white w-full rounded-xl text-xs sm:text-sm focus:border-red-500"
-            />
+              className="select select-sm sm:select-md bg-[#0d1322] border-slate-700 text-white w-full rounded-xl text-xs sm:text-sm focus:border-red-500"
+            >
+              {availableThanas.map(th => (<option key={th} value={th}>{th}</option>))}
+            </select>
           </div>
         </div>
 
-        {/* 🗺️ MAP CONTAINER WITH RED PIN 🗺️ */}
+        {/* INTERACTIVE MAP */}
         <div className="space-y-2 bg-[#080d1a] p-3.5 sm:p-4 rounded-2xl border border-slate-800">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>
               <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <span className="text-red-500">📍</span> Select Your Location on Map (Click to place Red Pin):
+                <span className="text-red-500">📍</span> Click on map to pinpoint exact location in {formData.thana}, {formData.zila}:
               </label>
               <p className="text-[10px] text-slate-400 mt-0.5">
-                Selected Coordinates: <span className="text-red-400 font-mono font-bold">{position[0].toFixed(5)}, {position[1].toFixed(5)}</span>
+                Pinned GPS: <span className="text-red-400 font-mono font-bold">{position[0].toFixed(5)}, {position[1].toFixed(5)}</span>
               </p>
             </div>
 
@@ -338,9 +372,10 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
               style={{ height: '100%', width: '100%' }}
             >
               <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                attribution='&copy; OpenStreetMap'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
+              <MapViewController center={position} />
               <LocationMarker position={position} setPosition={setPosition} />
             </MapContainer>
           </div>
@@ -351,7 +386,7 @@ const DonorRegistry = ({ divisions, bloodGroups, donors = [], setDonors, user })
           disabled={loading}
           className="btn btn-sm sm:btn-md bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white border-none w-full rounded-xl font-bold text-xs sm:text-sm active:scale-[0.99] shadow-lg shadow-red-950/60 transition-all"
         >
-          {loading ? 'Registering Profile & Location...' : 'Complete Blood Donor Registration'}
+          {loading ? 'Registering Profile...' : 'Complete Blood Donor Registration'}
         </button>
       </form>
     </div>

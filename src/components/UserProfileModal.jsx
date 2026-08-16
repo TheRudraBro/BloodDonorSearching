@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { 
+  doc, 
+  getDoc, 
+  updateDoc, 
+  deleteDoc, 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  arrayUnion 
+} from 'firebase/firestore';
+import { deleteUser } from 'firebase/auth';
 import { db } from '../firebase/config';
 
 const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
@@ -9,6 +20,7 @@ const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -89,7 +101,66 @@ const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
     }
   };
 
-  // সবার জন্য নির্ভরযোগ্য ও প্রিমিয়াম 3D ভেক্টর অবতার
+  // 🌟 GUARANTEED CASCADE DELETE (UID & Email Multi-Check) 🌟
+  const handleDeleteAccount = async () => {
+    const confirmation = window.confirm(
+      "⚠️ ARE YOU SURE?\n\nDeleting your account will permanently remove your Donor Registration, Pinned Location, and Patient Requests from Firebase. This cannot be undone."
+    );
+
+    if (!confirmation) return;
+
+    setDeleting(true);
+    try {
+      if (db && user) {
+        const deletePromises = [];
+
+        // ১. donors কালেকশন থেকে UID দিয়ে ম্যাচ করে ডিলিট
+        if (user.uid) {
+          const donorsByUidQ = query(collection(db, "donors"), where("uid", "==", user.uid));
+          const snapByUid = await getDocs(donorsByUidQ);
+          snapByUid.forEach(dDoc => deletePromises.push(deleteDoc(doc(db, "donors", dDoc.id))));
+        }
+
+        // ২. donors কালেকশন থেকে Email দিয়ে ম্যাচ করে ডিলিট (সেফটি ব্যাকআপ)
+        if (user.email) {
+          const donorsByEmailQ = query(collection(db, "donors"), where("email", "==", user.email));
+          const snapByEmail = await getDocs(donorsByEmailQ);
+          snapByEmail.forEach(dDoc => deletePromises.push(deleteDoc(doc(db, "donors", dDoc.id))));
+        }
+
+        // ৩. patient_requests কালেকশন থেকে ইউজারের পোস্ট ডিলিট
+        if (user.uid) {
+          const reqByUid = query(collection(db, "patient_requests"), where("uid", "==", user.uid));
+          const snapReq = await getDocs(reqByUid);
+          snapReq.forEach(rDoc => deletePromises.push(deleteDoc(doc(db, "patient_requests", rDoc.id))));
+        }
+
+        // ৪. users কালেকশন থেকে ইউজারের পার্সোনাল ডকুমেন্ট ডিলিট
+        if (user.uid) {
+          deletePromises.push(deleteDoc(doc(db, "users", user.uid)));
+        }
+
+        // সব ডেটাবেজ ডিলিট শেষ হওয়া পর্যন্ত অপেক্ষা
+        await Promise.all(deletePromises);
+      }
+
+      // ৫. ফায়ারবেস অথেন্টিকেশন অ্যাকাউন্ট পার্মানেন্ট ডিলিট
+      await deleteUser(user);
+      alert("✅ Your account and all registered donor data have been completely erased!");
+      onClose();
+      if (onLogout) onLogout();
+    } catch (err) {
+      console.error("Account delete error:", err);
+      if (err.code === 'auth/requires-recent-login') {
+        alert("⚠️ Security Alert: Please log out and log in again before deleting your account.");
+      } else {
+        alert("Failed to delete account: " + err.message);
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const displayName = user.displayName || 'Emergency Donor';
   const autoAvatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(displayName)}&backgroundColor=b91c1c,991b1b,7f1d1d`;
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=dc2626&color=ffffff&bold=true`;
@@ -105,12 +176,13 @@ const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
           ✕
         </button>
 
-        {/* 🌟 100% Reliable Auto Avatar & User Info 🌟 */}
+        {/* Avatar & User Info */}
         <div className="flex items-center gap-3.5 border-b border-slate-800/80 pb-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600/40 to-slate-900 border border-red-500/60 p-1 flex items-center justify-center shrink-0 shadow-lg shadow-red-950/50">
             <img 
               src={user.photoURL || autoAvatarUrl} 
               alt="Avatar"
+              referrerPolicy="no-referrer"
               onError={(e) => {
                 e.target.onerror = null;
                 e.target.src = fallbackAvatar;
@@ -174,7 +246,7 @@ const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
           </p>
         </form>
 
-        {/* Donation History */}
+        {/* Donation History Log */}
         {history.length > 0 && (
           <div className="space-y-1.5 pt-1">
             <p className="text-[11px] font-bold text-slate-400">📜 Donation History Log:</p>
@@ -189,8 +261,8 @@ const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
           </div>
         )}
 
-        {/* 🌟 BRIGHT RED LOG OUT BUTTON 🌟 */}
-        <div className="pt-2 border-t border-slate-800/80">
+        {/* 🌟 ACTION BUTTONS 🌟 */}
+        <div className="pt-2 border-t border-slate-800/80 space-y-2">
           <button 
             type="button"
             onClick={() => {
@@ -200,6 +272,15 @@ const UserProfileModal = ({ isOpen, onClose, user, onLogout }) => {
             className="btn btn-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white border-none font-bold rounded-xl w-full text-xs shadow-lg shadow-red-950/60 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
           >
             <span>🚪</span> Log Out Account
+          </button>
+
+          <button 
+            type="button"
+            onClick={handleDeleteAccount}
+            disabled={deleting}
+            className="btn btn-xs bg-slate-900/90 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-800 rounded-xl w-full text-[11px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all"
+          >
+            <span>🗑️</span> {deleting ? 'Deleting All Registered Data...' : 'Delete Account & Erase All Data'}
           </button>
         </div>
 

@@ -20,11 +20,6 @@ import LiveEmergencyTicker from './components/LiveEmergencyTicker';
 import EmergencyPosterModal from './components/EmergencyPosterModal';
 import DonorRewardsModal from './components/DonorRewardsModal';
 
-const divisions = [
-  "Dhaka", "Chattogram", "Khulna", "Rajshahi", 
-  "Sylhet", "Barishal", "Rangpur", "Mymensingh"
-];
-
 const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 const computeScore = (donor, requestedBloodData) => {
@@ -108,7 +103,7 @@ function App() {
   }, []);
 
   const handleQuickBloodGroupSelect = (group) => {
-    setRequestedBloodData({ ...requestedBloodData, bloodGroup: group });
+    setRequestedBloodData(prev => ({ ...prev, bloodGroup: group }));
     setActiveTab("search");
   };
 
@@ -118,9 +113,10 @@ function App() {
       .map(donor => ({ ...donor, score: computeScore(donor, requestedBloodData) }))
       .filter(donor => {
         if (donor.score === 0) return false;
+        const matchDivision = !requestedBloodData.division || donor.division === requestedBloodData.division;
         const matchZila = !requestedBloodData.zila || donor.zila === requestedBloodData.zila;
         const matchThana = !requestedBloodData.thana || donor.thana === requestedBloodData.thana;
-        return matchZila && matchThana;
+        return matchDivision && matchZila && matchThana;
       })
       .sort((a, b) => b.score - a.score);
   };
@@ -278,12 +274,12 @@ function App() {
               bloodGroups={bloodGroups} 
               requests={requests} 
               onShare={(req) => setSelectedPosterReq(req)}
+              user={user}
             />
           )}
 
           {activeTab === "register" && (
             <DonorRegistry 
-              divisions={divisions} 
               bloodGroups={bloodGroups} 
               donors={donors} 
               setDonors={setDonors} 
@@ -294,18 +290,18 @@ function App() {
           {activeTab === "search" && (
             <div className="space-y-4 sm:space-y-5">
               <DonorFind 
-                divisions={divisions} 
                 bloodGroups={bloodGroups} 
                 requestedBloodData={requestedBloodData}
                 setRequestedBloodData={setRequestedBloodData}
                 matchedDonors={matchedList}
+                user={user}
               />
               <DonorMap donors={requestedBloodData.bloodGroup ? matchedList : []} />
             </div>
           )}
 
           {activeTab === "directory" && (
-            <DonorList donors={donors} />
+            <DonorList donors={donors} user={user} />
           )}
         </div>
       </main>
