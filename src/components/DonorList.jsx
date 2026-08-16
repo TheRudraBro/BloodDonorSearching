@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 
-const DonorList = ({ donors = [], user }) => {
+const DonorList = ({ donors = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('ALL');
   const [selectedDivision, setSelectedDivision] = useState('ALL');
@@ -86,8 +86,6 @@ const DonorList = ({ donors = [], user }) => {
           doc.text("Location (District / Area)", 105, startY + 5.5);
           doc.text("Contact Phone", 165, startY + 5.5);
           startY += 8;
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8.5);
         }
 
         if (idx % 2 === 0) {
@@ -188,23 +186,20 @@ const DonorList = ({ donors = [], user }) => {
             const waNumber = formatBangladeshPhone(donor.phone);
             const waMsg = `Hello ${donor.name || 'Brother/Sister'}, I got your contact from Emergency Blood Finder. We have an urgent blood requirement for ${donor.bloodGroup} blood. Are you currently available to donate?`;
 
-            const donorImg =
-              donor.photoURL ||
-              (user && (user.uid === donor.uid || user.email === donor.email) ? user.photoURL : null) ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'User')}&background=dc2626&color=ffffff&bold=true`;
+            // প্রত্যেক ডোনারের নিজস্ব photoURL
+            const donorImg = donor.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
 
             return (
               <div
                 key={donor.id || idx}
                 className="relative overflow-hidden bg-gradient-to-b from-[#0e1628] to-[#090e1c] border border-red-950/90 hover:border-red-500/50 p-4 rounded-3xl shadow-xl space-y-3.5 transition-all group flex flex-col justify-between"
               >
-                {/* Glow Overlay */}
                 <div className="absolute top-0 right-0 w-24 h-24 bg-red-600/5 rounded-full blur-xl pointer-events-none group-hover:bg-red-600/10 transition-all"></div>
 
                 {/* Profile Header */}
                 <div className="flex items-start justify-between gap-3 relative z-10">
                   <div className="flex items-center gap-3 min-w-0">
-                    {/* Image with Blood Badge below */}
+                    {/* Donor's Individual Photo with Blood Badge below */}
                     <div className="flex flex-col items-center shrink-0">
                       <img
                         src={donorImg}
@@ -212,7 +207,7 @@ const DonorList = ({ donors = [], user }) => {
                         referrerPolicy="no-referrer"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'User')}&background=dc2626&color=ffffff&bold=true`;
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
                         }}
                         className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-slate-900 object-cover ring-2 ring-red-500/70 p-0.5 shadow-lg shadow-red-950/50"
                       />

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import { bangladeshGeoData } from '../data/bangladeshGeoData';
 
-const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, matchedDonors = [], user }) => {
+const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, matchedDonors = [] }) => {
   const [isExporting, setIsExporting] = useState(false);
   const divisionList = Object.keys(bangladeshGeoData || {});
 
@@ -53,7 +53,6 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
-      // Header Banner
       doc.setFillColor(13, 19, 34);
       doc.rect(0, 0, 210, 32, 'F');
       doc.setTextColor(239, 68, 68);
@@ -251,31 +250,28 @@ const DonorFind = ({ bloodGroups, requestedBloodData, setRequestedBloodData, mat
                 const waNumber = formatBangladeshPhone(donor.phone);
                 const waMsg = `Hello ${donor.name || 'Brother/Sister'}, I saw your profile on Emergency Blood Finder. We urgently need ${donor.bloodGroup} blood at ${requestedBloodData.zila || 'our area'}. Are you available to donate?`;
 
-                const donorImg =
-                  donor.photoURL ||
-                  (user && (user.uid === donor.uid || user.email === donor.email) ? user.photoURL : null) ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'User')}&background=dc2626&color=ffffff&bold=true`;
+                // প্রত্যেক ডোনারের নিজস্ব photoURL, না থাকলে তার নামের উপর ভিত্তি করে ডিফল্ট অবতার
+                const donorImg = donor.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
 
                 return (
                   <div
                     key={donor.id || idx}
                     className="relative overflow-hidden bg-gradient-to-b from-[#0e1628] to-[#090e1c] border border-red-950/90 hover:border-red-500/50 p-4 rounded-3xl shadow-xl space-y-3.5 transition-all group flex flex-col justify-between"
                   >
-                    {/* Top Glow Element */}
                     <div className="absolute top-0 right-0 w-24 h-24 bg-red-600/5 rounded-full blur-xl pointer-events-none group-hover:bg-red-600/10 transition-all"></div>
 
                     {/* Donor Header */}
                     <div className="flex items-start justify-between gap-3 relative z-10">
                       <div className="flex items-center gap-3 min-w-0">
-                        {/* Profile Image with Blood Badge below */}
+                        {/* Donor's Individual Photo with Blood Badge below */}
                         <div className="flex flex-col items-center shrink-0">
                           <img
                             src={donorImg}
-                            alt={donor.name || 'User'}
+                            alt={donor.name || 'Donor'}
                             referrerPolicy="no-referrer"
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'User')}&background=dc2626&color=ffffff&bold=true`;
+                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(donor.name || 'Donor')}&background=dc2626&color=ffffff&bold=true`;
                             }}
                             className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-slate-900 object-cover ring-2 ring-red-500/70 p-0.5 shadow-lg shadow-red-950/50"
                           />
